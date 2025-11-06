@@ -13,8 +13,10 @@ export default function Dashboard() {
   const toast = useToast();
 
   useEffect(() => {
+    console.log('[DASHBOARD] Session status:', status, 'Session:', session);
     if (status === 'unauthenticated') {
-      router.push('/auth/signin');
+      console.log('[DASHBOARD] Not authenticated, redirecting to signin');
+      router.push('/auth/signin?callbackUrl=/dashboard');
     }
   }, [status, router]);
 

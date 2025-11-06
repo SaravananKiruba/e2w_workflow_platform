@@ -22,30 +22,36 @@ export default function SignIn() {
     setIsLoading(true);
 
     try {
+      // Use redirect: true to let NextAuth handle the redirect automatically
       const result = await signIn('credentials', {
         email,
         password,
-        redirect: false,
+        redirect: true,
+        callbackUrl: callbackUrl,
       });
 
-      if (result?.error) {
+      // If we get here with redirect: true, something went wrong
+      // signIn with redirect: true should not return control here on success
+      if (!result || result.error) {
+        console.log('[SIGNIN] Login failed:', result?.error);
         toast({
           title: 'Authentication failed',
           description: 'Invalid email or password',
           status: 'error',
           duration: 5000,
+          isClosable: true,
         });
-      } else {
-        router.push(callbackUrl);
+        setIsLoading(false);
       }
     } catch (error) {
+      console.error('[SIGNIN] Error during login:', error);
       toast({
         title: 'Error',
-        description: 'Something went wrong',
+        description: 'Something went wrong. Please try again.',
         status: 'error',
         duration: 5000,
+        isClosable: true,
       });
-    } finally {
       setIsLoading(false);
     }
   };

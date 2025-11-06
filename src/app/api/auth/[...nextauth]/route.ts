@@ -120,10 +120,12 @@ const authOptions: NextAuthOptions = {
         if (!existingUser) {
           // For Google OAuth, we need a tenant context
           // This should be handled during registration flow
+          console.log('[AUTH] Google user not found:', user.email);
           return '/auth/setup-tenant';
         }
 
         if (existingUser.status !== 'active') {
+          console.log('[AUTH] Google user not active:', user.email);
           return false;
         }
 
@@ -132,8 +134,18 @@ const authOptions: NextAuthOptions = {
           where: { id: existingUser.id },
           data: { lastLoginAt: new Date() },
         });
+
+        console.log('[AUTH] Google login successful for:', user.email);
       }
       return true;
+    },
+    async redirect({ url, baseUrl }) {
+      // Allows relative callback URLs
+      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url;
+      // Default redirect to dashboard
+      return `${baseUrl}/dashboard`;
     },
   },
   pages: {
