@@ -269,3 +269,29 @@ model DynamicRecord {
   @@index([tenantId, moduleName, createdAt])
   @@map("dynamic_records")
 }
+
+// ==========================================
+// AUTO-NUMBERING SEQUENCES
+// ==========================================
+
+model AutoNumberSequence {
+  id          String   @id @default(cuid())
+  tenantId    String
+  
+  moduleName  String   // Leads, Quotations, Orders, Invoices, Payments, etc.
+  prefix      String   // QT, ORD, INV, TXN, etc.
+  format      String   // e.g., "{prefix}-{padded:5}" → QT-00001, or "{prefix}/{year}/{padded:3}" → QT/2025/001
+  
+  nextNumber  Int      @default(1)  // Next number to generate
+  
+  // Example: prefix=QT, format={prefix}-{padded:5}, nextNumber=42 → QT-00042
+  // Example: prefix=INV, format={prefix}/{year}/{padded:3}, nextNumber=5 → INV/2025/005
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([tenantId, moduleName])
+  @@index([tenantId])
+  @@map("auto_number_sequences")
+}
+

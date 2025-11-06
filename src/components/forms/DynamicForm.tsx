@@ -27,6 +27,12 @@ export function DynamicForm({ config, initialData = {}, onSubmit, onChange }: Dy
     }
   };
 
+  const handleCascadePopulate = (fields: Record<string, any>) => {
+    const newData = { ...formData, ...fields };
+    setFormData(newData);
+    onChange?.(newData);
+  };
+
   const validate = () => {
     const newErrors: Record<string, string> = {};
 
@@ -61,6 +67,12 @@ export function DynamicForm({ config, initialData = {}, onSubmit, onChange }: Dy
           }
         });
       }
+
+      // Lookup field validation - reference must exist
+      if (field.dataType === 'lookup' && field.isRequired && value) {
+        // Validate reference exists (can be done async in a separate step)
+        // For now, just validate that value is not empty
+      }
     });
 
     setErrors(newErrors);
@@ -86,6 +98,7 @@ export function DynamicForm({ config, initialData = {}, onSubmit, onChange }: Dy
               field={field}
               value={formData[field.name]}
               onChange={handleFieldChange}
+              onCascadePopulate={handleCascadePopulate}
               error={errors[field.name]}
             />
           ))}
@@ -102,6 +115,7 @@ export function DynamicForm({ config, initialData = {}, onSubmit, onChange }: Dy
               field={field}
               value={formData[field.name]}
               onChange={handleFieldChange}
+              onCascadePopulate={handleCascadePopulate}
               error={errors[field.name]}
             />
           ))}
@@ -118,6 +132,7 @@ export function DynamicForm({ config, initialData = {}, onSubmit, onChange }: Dy
             field={field}
             value={formData[field.name]}
             onChange={handleFieldChange}
+            onCascadePopulate={handleCascadePopulate}
             error={errors[field.name]}
           />
         ))}

@@ -10,6 +10,16 @@ export interface FieldConfig {
   maxSize?: number;
   accept?: string;
   expression?: string;
+  // Lookup field config
+  targetModule?: string;
+  displayField?: string;
+  searchFields?: string[];
+  cascadeFields?: Record<string, string>;
+  // Table field config
+  columns?: FieldDefinition[];
+  allowAdd?: boolean;
+  allowDelete?: boolean;
+  allowEdit?: boolean;
   [key: string]: any;
 }
 

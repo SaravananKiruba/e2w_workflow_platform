@@ -30,10 +30,21 @@ async function seedPaymentsModule() {
       {
         name: 'invoiceId',
         label: 'Invoice',
-        dataType: 'text',
+        dataType: 'lookup',
         uiType: 'lookup',
         isRequired: true,
         placeholder: 'Select invoice',
+        config: {
+          targetModule: 'Invoices',
+          displayField: 'invoiceNumber',
+          searchFields: ['invoiceNumber', 'clientName'],
+          cascadeFields: {
+            invoiceNumber: 'invoiceNumber',
+            total: 'invoiceAmount',
+            clientId: 'clientId',
+            clientName: 'clientName',
+          },
+        },
       },
       {
         name: 'invoiceNumber',
@@ -48,10 +59,18 @@ async function seedPaymentsModule() {
       {
         name: 'clientId',
         label: 'Client',
-        dataType: 'text',
+        dataType: 'lookup',
         uiType: 'lookup',
         isRequired: true,
         placeholder: 'Select client',
+        config: {
+          targetModule: 'Clients',
+          displayField: 'clientName',
+          searchFields: ['clientName', 'email', 'phone'],
+          cascadeFields: {
+            clientName: 'clientName',
+          },
+        },
       },
       {
         name: 'clientName',
