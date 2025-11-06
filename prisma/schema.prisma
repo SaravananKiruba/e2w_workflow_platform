@@ -1,0 +1,271 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// CORE MULTI-TENANT MODELS
+// ==========================================
+
+model Tenant {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  domain        String?  @unique
+  status        String   @default("active") // active, suspended, inactive
+  subscriptionTier String @default("free") // free, basic, professional, enterprise
+  
+  // Metadata (stored as JSON strings for SQLite)
+  settings      String?  // Tenant-specific settings (JSON)
+  branding      String?  // Logo, colors, theme (JSON)
+  
+  // Audit fields
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdBy     String?
+  
+  // Relations
+  users         User[]
+  branches      Branch[]
+  modules       ModuleConfiguration[]
+  workflows     Workflow[]
+  integrations  Integration[]
+  auditLogs     AuditLog[]
+  
+  @@map("tenants")
+}
+
+model Branch {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  code        String
+  address     String?  // JSON: Street, city, state, pincode, country
+  contact     String?  // JSON: Phone, email
+  gstNumber   String?
+  
+  status      String   @default("active")
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users       User[]
+  
+  @@unique([tenantId, code])
+  @@map("branches")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  tenantId      String
+  branchId      String?
+  
+  email         String    @unique
+  name          String
+  password      String?   // Hashed - optional for OAuth users
+  image         String?
+  
+  role          String    @default("staff") // admin, manager, staff
+  permissions   String?   // JSON: Field-level, module-level permissions
+  
+  status        String    @default("active")
+  emailVerified DateTime?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
+  
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch        Branch?   @relation(fields: [branchId], references: [id])
+  
+  createdAuditLogs AuditLog[] @relation("UserAuditLogs")
+  
+  @@map("users")
+}
+
+// ==========================================
+// METADATA & CONFIGURATION MODELS
+// ==========================================
+
+model ModuleConfiguration {
+  id          String   @id @default(cuid())
+  tenantId    String
+  
+  moduleName  String   // Leads, Clients, Quotations, Orders, Invoices, etc.
+  displayName String
+  icon        String?
+  description String?
+  
+  // Dynamic schema definition (stored as JSON strings)
+  fields      String   // JSON: Array of field definitions
+  layouts     String?  // JSON: UI layout configuration
+  validations String?  // JSON: Validation rules
+  
+  status      String   @default("draft") // draft, review, active, archived
+  version     Int      @default(1)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  approvedBy  String?
+  approvedAt  DateTime?
+  
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@unique([tenantId, moduleName, version])
+  @@map("module_configurations")
+}
+
+model MetadataLibrary {
+  id          String   @id @default(cuid())
+  
+  category    String   // field_types, ui_components, validation_types, etc.
+  name        String
+  label       String
+  description String?
+  
+  config      String   // JSON: Configuration schema for this element
+  
+  isSystem    Boolean  @default(true)  // System vs custom
+  status      String   @default("active")
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([category, name])
+  @@map("metadata_library")
+}
+
+// ==========================================
+// WORKFLOW ENGINE MODELS
+// ==========================================
+
+model Workflow {
+  id          String   @id @default(cuid())
+  tenantId    String
+  
+  name        String
+  description String?
+  moduleName  String   // Which module this workflow applies to
+  
+  trigger     String   // JSON: Trigger definition (onCreate, onUpdate, etc.)
+  conditions  String?  // JSON: AND/OR conditions
+  actions     String   // JSON: Array of actions to execute
+  
+  isActive    Boolean  @default(true)
+  priority    Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  executions  WorkflowExecution[]
+  
+  @@map("workflows")
+}
+
+model WorkflowExecution {
+  id          String   @id @default(cuid())
+  workflowId  String
+  
+  recordId    String   // ID of the record that triggered the workflow
+  status      String   // success, failed, running
+  
+  input       String?  // JSON: Input data
+  output      String?  // JSON: Execution results
+  error       String?
+  
+  executedAt  DateTime @default(now())
+  completedAt DateTime?
+  
+  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  @@map("workflow_executions")
+}
+
+// ==========================================
+// INTEGRATION MODELS
+// ==========================================
+
+model Integration {
+  id            String   @id @default(cuid())
+  tenantId      String
+  
+  type          String   // google_drive, smtp, etc.
+  name          String
+  
+  credentials   String   // Encrypted JSON
+  config        String?  // JSON: Integration-specific configuration
+  
+  status        String   @default("active")
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastSyncAt    DateTime?
+  
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@unique([tenantId, type, name])
+  @@map("integrations")
+}
+
+// ==========================================
+// AUDIT & COMPLIANCE MODELS
+// ==========================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  tenantId    String
+  userId      String?
+  
+  action      String   // create, update, delete, login, config_change
+  entity      String   // user, lead, client, config, etc.
+  entityId    String?
+  
+  changes     String?  // JSON: Before/after diff
+  metadata    String?  // JSON: Additional context
+  
+  ipAddress   String?
+  userAgent   String?
+  
+  createdAt   DateTime @default(now())
+  
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User?    @relation("UserAuditLogs", fields: [userId], references: [id])
+  
+  @@index([tenantId, createdAt])
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}
+
+// ==========================================
+// DYNAMIC DATA MODELS (Generic Storage)
+// ==========================================
+
+model DynamicRecord {
+  id          String   @id @default(cuid())
+  tenantId    String
+  
+  moduleName  String   // Leads, Clients, etc.
+  data        String   // JSON: Actual field values
+  
+  status      String   @default("active")
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  updatedBy   String?
+  
+  @@index([tenantId, moduleName])
+  @@index([tenantId, moduleName, createdAt])
+  @@map("dynamic_records")
+}
