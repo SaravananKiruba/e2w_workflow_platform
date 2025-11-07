@@ -21,17 +21,40 @@ export class LookupService {
     limit: number = 50
   ) {
     try {
+      console.log('[LookupService] Query:', { tenantId, targetModule, displayField, searchFields });
+      
       // Get module configuration to understand the data structure
       const moduleConfig = await prisma.moduleConfiguration.findFirst({
         where: { tenantId, moduleName: targetModule, status: 'active' },
       });
 
       if (!moduleConfig) {
-        throw new Error(`Module ${targetModule} not found`);
+        console.error('[LookupService] Module not found:', { tenantId, targetModule });
+        throw new Error(`Module ${targetModule} not found for tenant ${tenantId}`);
       }
 
+      console.log('[LookupService] Module config found:', {
+        moduleName: moduleConfig.moduleName,
+        status: moduleConfig.status,
+        version: moduleConfig.version
+      });
+
       const fields = JSON.parse(moduleConfig.fields);
-      const display = displayField || fields.find((f: any) => f.name === 'name' || f.name === 'title' || f.name === `${targetModule.toLowerCase()}Name`)?.name;
+      
+      // Determine the display field - use provided field or try to find a suitable one
+      let display = displayField;
+      if (!display) {
+        // Look for common name patterns
+        const nameField = fields.find((f: any) => 
+          f.name === 'name' || 
+          f.name === 'title' || 
+          f.name === `${targetModule.toLowerCase()}Name` ||
+          f.name.toLowerCase().includes('name')
+        );
+        display = nameField?.name || fields[0]?.name;
+      }
+
+      console.log('[LookupService] Display field determined:', display);
 
       // Build query for DynamicRecord
       let where: any = {
@@ -40,14 +63,7 @@ export class LookupService {
         status: 'active',
       };
 
-      // Add search filter if provided
-      if (searchTerm && searchFields && searchFields.length > 0) {
-        // For simple search, we'll filter in memory since SQLite limitations
-        // In production, consider full-text search solutions
-        where._or = searchFields.map((field: string) => ({
-          data: { contains: searchTerm, mode: 'insensitive' },
-        }));
-      }
+      console.log('[LookupService] Querying with:', where);
 
       const records = await prisma.dynamicRecord.findMany({
         where,
@@ -55,10 +71,12 @@ export class LookupService {
         orderBy: { createdAt: 'desc' },
       });
 
+      console.log('[LookupService] Found records:', records.length);
+
       // Transform records to options
-      return records.map((record) => {
+      const options = records.map((record) => {
         const data = JSON.parse(record.data);
-        const label = display ? data[display] : `Record ${record.id.substring(0, 8)}`;
+        const label = display && data[display] ? data[display] : `Record ${record.id.substring(0, 8)}`;
 
         return {
           value: record.id,
@@ -66,8 +84,30 @@ export class LookupService {
           record: data, // Include full record for cascading
         };
       });
+
+      console.log('[LookupService] Returning options:', {
+        count: options.length,
+        sample: options.slice(0, 2).map(o => ({ label: o.label, value: o.value.substring(0, 8) + '...' }))
+      });
+
+      // Apply client-side filtering if search term provided
+      if (searchTerm && searchFields && searchFields.length > 0) {
+        const filtered = options.filter((opt) => {
+          return searchFields.some((field) => {
+            const fieldValue = opt.record[field];
+            if (fieldValue && typeof fieldValue === 'string') {
+              return fieldValue.toLowerCase().includes(searchTerm.toLowerCase());
+            }
+            return false;
+          });
+        });
+        console.log('[LookupService] After search filter:', filtered.length, 'records');
+        return filtered;
+      }
+
+      return options;
     } catch (error) {
-      console.error('Error fetching lookup options:', error);
+      console.error('[LookupService] Error fetching lookup options:', error);
       throw error;
     }
   }

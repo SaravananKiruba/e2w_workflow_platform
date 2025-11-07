@@ -384,7 +384,13 @@ async function seedInvoicesModule() {
         version: 1,
       },
     },
-    update: {},
+    update: {
+      fields: JSON.stringify(invoicesConfig.fields),
+      displayName: 'Invoices',
+      icon: '📄',
+      description: 'Create and manage invoices with GST compliance',
+      status: 'active',
+    },
     create: {
       tenantId: demoTenant.id,
       moduleName: 'Invoices',

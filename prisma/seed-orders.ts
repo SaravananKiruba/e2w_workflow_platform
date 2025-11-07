@@ -354,7 +354,13 @@ async function seedOrdersModule() {
         version: 1,
       },
     },
-    update: {},
+    update: {
+      fields: JSON.stringify(ordersConfig.fields),
+      displayName: 'Orders',
+      icon: '📦',
+      description: 'Manage customer orders and fulfillment',
+      status: 'active',
+    },
     create: {
       tenantId: demoTenant.id,
       moduleName: 'Orders',

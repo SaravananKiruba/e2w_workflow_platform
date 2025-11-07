@@ -362,7 +362,13 @@ async function seedQuotationsModule() {
         version: 1,
       },
     },
-    update: {},
+    update: {
+      fields: JSON.stringify(quotationsConfig.fields),
+      displayName: 'Quotations',
+      icon: '📋',
+      description: 'Create and manage quotations for clients',
+      status: 'active',
+    },
     create: {
       tenantId: demoTenant.id,
       moduleName: 'Quotations',

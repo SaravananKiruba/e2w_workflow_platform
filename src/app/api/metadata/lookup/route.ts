@@ -24,6 +24,8 @@ export async function GET(request: NextRequest) {
     
     const searchFields = searchFieldsParam?.split(',') || ['name'];
 
+    console.log('[Lookup API] Request:', { tenantId, targetModule, displayField, searchFields });
+
     // Validate inputs
     if (!tenantId || !targetModule) {
       return NextResponse.json(
@@ -49,6 +51,7 @@ export async function GET(request: NextRequest) {
           searchFields
         );
 
+    console.log('[Lookup API] Returning', options.length, 'options');
     return NextResponse.json(options);
   } catch (error) {
     console.error('Error fetching lookup options:', error);
