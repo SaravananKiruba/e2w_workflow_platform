@@ -29,12 +29,15 @@ import {
   TabPanels,
   Tab,
   TabPanel,
+  Badge,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { DynamicForm } from '@/components/forms/DynamicForm';
 import { ModuleConfig, FieldDefinition } from '@/types/metadata';
+import AppLayout from '@/components/layout/AppLayout';
 
 interface ModuleRecord {
   id: string;
@@ -386,7 +389,8 @@ export default function ModulePage() {
   ).slice(0, 4);
 
   return (
-    <Container maxW="full" py={6}>
+    <AppLayout>
+      <Container maxW="full" py={6}>
       <VStack align="stretch" spacing={6}>
         {/* Header */}
         <HStack justify="space-between" align="center">
@@ -593,5 +597,6 @@ export default function ModulePage() {
         </ModalContent>
       </Modal>
     </Container>
+    </AppLayout>
   );
 }

@@ -53,6 +53,7 @@ import ReactFlow, {
   NodeTypes,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import AppLayout from '@/components/layout/AppLayout';
 
 // Custom Node Components
 import TriggerNode from './nodes/TriggerNode';
@@ -289,7 +290,8 @@ export default function WorkflowBuilderPage() {
   };
 
   return (
-    <Container maxW="100vw" h="100vh" p={0}>
+    <AppLayout>
+      <Container maxW="100vw" h="calc(100vh - 64px)" p={0}>
       <VStack h="100%" spacing={0}>
         {/* Header */}
         <Box w="100%" bg="white" borderBottom="1px" borderColor="gray.200" p={4}>
@@ -463,5 +465,6 @@ export default function WorkflowBuilderPage() {
         </DrawerContent>
       </Drawer>
     </Container>
+    </AppLayout>
   );
 }
