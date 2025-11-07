@@ -35,6 +35,12 @@ async function seedOrdersModule() {
         uiType: 'lookup',
         isRequired: false,
         placeholder: 'Link to quotation (optional)',
+        config: {
+          targetModule: 'Quotations',
+          displayField: 'quotationNumber',
+          searchFields: ['quotationNumber', 'clientName'],
+          cascadeFields: {},
+        },
       },
       {
         name: 'clientId',
@@ -44,6 +50,14 @@ async function seedOrdersModule() {
         isRequired: true,
         placeholder: 'Select client',
         helpText: 'Link to Clients module',
+        config: {
+          targetModule: 'Clients',
+          displayField: 'clientName',
+          searchFields: ['clientName', 'email', 'phone'],
+          cascadeFields: {
+            clientName: 'clientName',
+          },
+        },
       },
       {
         name: 'clientName',

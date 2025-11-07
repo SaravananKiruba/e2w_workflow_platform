@@ -35,6 +35,12 @@ async function seedInvoicesModule() {
         uiType: 'lookup',
         isRequired: false,
         placeholder: 'Link to Orders (optional)',
+        config: {
+          targetModule: 'Orders',
+          displayField: 'orderNumber',
+          searchFields: ['orderNumber', 'clientName'],
+          cascadeFields: {},
+        },
       },
       {
         name: 'quotationId',
@@ -43,6 +49,12 @@ async function seedInvoicesModule() {
         uiType: 'lookup',
         isRequired: false,
         placeholder: 'Link to Quotation (optional)',
+        config: {
+          targetModule: 'Quotations',
+          displayField: 'quotationNumber',
+          searchFields: ['quotationNumber', 'clientName'],
+          cascadeFields: {},
+        },
       },
       {
         name: 'clientId',
@@ -51,6 +63,15 @@ async function seedInvoicesModule() {
         uiType: 'lookup',
         isRequired: true,
         placeholder: 'Select client',
+        config: {
+          targetModule: 'Clients',
+          displayField: 'clientName',
+          searchFields: ['clientName', 'email', 'phone'],
+          cascadeFields: {
+            clientName: 'clientName',
+            gstin: 'clientGSTIN',
+          },
+        },
       },
       {
         name: 'clientName',
