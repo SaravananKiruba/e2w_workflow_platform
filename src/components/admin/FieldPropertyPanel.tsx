@@ -43,7 +43,20 @@ interface FieldDefinition {
   hidden?: boolean;
   defaultValue?: any;
   validation?: ValidationRule[];
-  options?: OptionItem[];
+  config?: {
+    maxLength?: number;
+    minLength?: number;
+    min?: number;
+    max?: number;
+    options?: OptionItem[];
+    targetModule?: string;
+    displayField?: string;
+    searchFields?: string[];
+    cascadeFields?: Record<string, string>;
+    columns?: any[];
+    [key: string]: any;
+  };
+  options?: OptionItem[]; // Deprecated - keep for backward compatibility
   lookupConfig?: LookupConfig;
   tableConfig?: TableConfig;
   dependencies?: DependencyRule[];
@@ -148,20 +161,29 @@ export default function FieldPropertyPanel({
   };
 
   const addOption = () => {
-    const options = localField.options || [];
-    handleChange('options', [...options, { label: '', value: '' }]);
+    const currentOptions = localField.config?.options || [];
+    handleChange('config', { 
+      ...localField.config, 
+      options: [...currentOptions, { label: '', value: '' }] 
+    });
   };
 
   const updateOption = (index: number, key: 'label' | 'value', value: string) => {
-    const options = [...(localField.options || [])];
-    options[index] = { ...options[index], [key]: value };
-    handleChange('options', options);
+    const currentOptions = [...(localField.config?.options || [])];
+    currentOptions[index] = { ...currentOptions[index], [key]: value };
+    handleChange('config', { 
+      ...localField.config, 
+      options: currentOptions 
+    });
   };
 
   const removeOption = (index: number) => {
-    const options = [...(localField.options || [])];
-    options.splice(index, 1);
-    handleChange('options', options);
+    const currentOptions = [...(localField.config?.options || [])];
+    currentOptions.splice(index, 1);
+    handleChange('config', { 
+      ...localField.config, 
+      options: currentOptions 
+    });
   };
 
   return (
@@ -247,12 +269,17 @@ export default function FieldPropertyPanel({
                     onChange={(e) => handleChange('dataType', e.target.value)}
                   >
                     <option value="text">Text</option>
+                    <option value="textarea">Text Area</option>
                     <option value="number">Number</option>
+                    <option value="currency">Currency</option>
                     <option value="email">Email</option>
+                    <option value="phone">Phone</option>
                     <option value="url">URL</option>
                     <option value="date">Date</option>
                     <option value="datetime">Date & Time</option>
-                    <option value="boolean">Boolean</option>
+                    <option value="checkbox">Checkbox</option>
+                    <option value="dropdown">Dropdown</option>
+                    <option value="radio">Radio Button</option>
                     <option value="select">Select</option>
                     <option value="multiselect">Multi-Select</option>
                     <option value="lookup">Lookup</option>
@@ -314,8 +341,11 @@ export default function FieldPropertyPanel({
                   />
                 </FormControl>
 
-                {/* Options for Select/MultiSelect */}
-                {(localField.dataType === 'select' || localField.dataType === 'multiselect') && (
+                {/* Options for Select/MultiSelect/Dropdown/Radio */}
+                {(localField.dataType === 'select' || 
+                  localField.dataType === 'multiselect' || 
+                  localField.dataType === 'dropdown' ||
+                  localField.dataType === 'radio') && (
                   <Box>
                     <HStack mb={2}>
                       <FormLabel mb={0}>Options</FormLabel>
@@ -330,7 +360,7 @@ export default function FieldPropertyPanel({
                       </Button>
                     </HStack>
                     <VStack spacing={2} align="stretch">
-                      {(localField.options || []).map((option, index) => (
+                      {(localField.config?.options || []).map((option, index) => (
                         <HStack key={index}>
                           <Input
                             placeholder="Label"
@@ -354,6 +384,11 @@ export default function FieldPropertyPanel({
                           />
                         </HStack>
                       ))}
+                      {(!localField.config?.options || localField.config.options.length === 0) && (
+                        <Text fontSize="sm" color="gray.500" fontStyle="italic">
+                          No options added yet. Click &quot;Add Option&quot; to get started.
+                        </Text>
+                      )}
                     </VStack>
                   </Box>
                 )}
@@ -366,10 +401,10 @@ export default function FieldPropertyPanel({
                       <FormControl>
                         <FormLabel fontSize="sm">Target Module</FormLabel>
                         <Select
-                          value={localField.lookupConfig?.targetModule || ''}
+                          value={localField.config?.targetModule || ''}
                           onChange={(e) =>
-                            handleChange('lookupConfig', {
-                              ...localField.lookupConfig,
+                            handleChange('config', {
+                              ...localField.config,
                               targetModule: e.target.value,
                             })
                           }
@@ -387,10 +422,10 @@ export default function FieldPropertyPanel({
                       <FormControl>
                         <FormLabel fontSize="sm">Display Field</FormLabel>
                         <Input
-                          value={localField.lookupConfig?.displayField || ''}
+                          value={localField.config?.displayField || ''}
                           onChange={(e) =>
-                            handleChange('lookupConfig', {
-                              ...localField.lookupConfig,
+                            handleChange('config', {
+                              ...localField.config,
                               displayField: e.target.value,
                             })
                           }

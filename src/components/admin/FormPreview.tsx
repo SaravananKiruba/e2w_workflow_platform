@@ -24,7 +24,20 @@ interface FieldDefinition {
   hidden?: boolean;
   defaultValue?: any;
   validation?: any[];
-  options?: any[];
+  config?: {
+    maxLength?: number;
+    minLength?: number;
+    min?: number;
+    max?: number;
+    options?: any[];
+    targetModule?: string;
+    displayField?: string;
+    searchFields?: string[];
+    cascadeFields?: Record<string, string>;
+    columns?: any[];
+    [key: string]: any;
+  };
+  options?: any[]; // Deprecated - keep for backward compatibility
   lookupConfig?: any;
   tableConfig?: any;
 }
@@ -115,10 +128,12 @@ export default function FormPreview({ fields, moduleName = 'Preview' }: FormPrev
                         defaultValue: field.defaultValue,
                         validation: field.validation,
                         config: {
-                          options: field.options,
-                          targetModule: field.lookupConfig?.targetModule,
-                          displayField: field.lookupConfig?.displayField,
-                          columns: field.tableConfig?.columns,
+                          ...(field.config || {}),
+                          // Fallback to old structure for backward compatibility
+                          options: field.config?.options || field.options,
+                          targetModule: field.config?.targetModule || field.lookupConfig?.targetModule,
+                          displayField: field.config?.displayField || field.lookupConfig?.displayField,
+                          columns: field.config?.columns || field.tableConfig?.columns,
                         },
                       }}
                       value={''}

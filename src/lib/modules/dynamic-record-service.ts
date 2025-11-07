@@ -81,28 +81,41 @@ export class DynamicRecordService {
     data: Record<string, any>,
     userId: string
   ) {
-    const existing = await this.getRecord(tenantId, moduleName, recordId);
+    // Get existing record to merge data
+    const existingRecord = await prisma.dynamicRecord.findFirst({
+      where: {
+        id: recordId,
+        tenantId,
+        moduleName,
+        status: 'active',
+      },
+    });
+
+    if (!existingRecord) {
+      throw new Error('Record not found');
+    }
+
+    const existingData = JSON.parse(existingRecord.data);
+    const mergedData = { ...existingData, ...data };
     
     const updated = await prisma.dynamicRecord.update({
       where: { id: recordId },
       data: {
-        data: JSON.stringify(data),
+        data: JSON.stringify(mergedData),
         updatedBy: userId,
       },
     });
 
     // Audit log with changes
-    if (existing) {
-      const changes = AuditService.createChangeDiff(existing, data);
-      await AuditService.log({
-        tenantId,
-        userId,
-        action: 'update',
-        entity: moduleName,
-        entityId: recordId,
-        changes,
-      });
-    }
+    const changes = AuditService.createChangeDiff(existingData, mergedData);
+    await AuditService.log({
+      tenantId,
+      userId,
+      action: 'update',
+      entity: moduleName,
+      entityId: recordId,
+      changes,
+    });
 
     return updated;
   }

@@ -1,9 +1,9 @@
 'use client';
 
-import { VStack, SimpleGrid, Box } from '@chakra-ui/react';
+import { VStack, SimpleGrid, Box, Button } from '@chakra-ui/react';
 import { DynamicField } from './DynamicField';
 import { ModuleConfig, LayoutConfig } from '@/types/metadata';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useImperativeHandle, forwardRef, useRef } from 'react';
 import { GSTCalculationService } from '@/lib/services/gst-calculation-service';
 
 interface DynamicFormProps {
@@ -13,7 +13,12 @@ interface DynamicFormProps {
   onChange?: (data: Record<string, any>) => void;
 }
 
-export function DynamicForm({ config, initialData = {}, onSubmit, onChange }: DynamicFormProps) {
+export interface DynamicFormRef {
+  submit: () => void;
+}
+
+export const DynamicForm = forwardRef<DynamicFormRef, DynamicFormProps>(
+  ({ config, initialData = {}, onSubmit, onChange }, ref) => {
   const [formData, setFormData] = useState<Record<string, any>>(initialData);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -213,9 +218,22 @@ export function DynamicForm({ config, initialData = {}, onSubmit, onChange }: Dy
     );
   };
 
+  // Expose submit method via ref
+  useImperativeHandle(ref, () => ({
+    submit: () => {
+      if (validate()) {
+        onSubmit(formData);
+      }
+    }
+  }));
+
   return (
     <Box as="form" onSubmit={handleSubmit}>
       {renderFields()}
+      {/* Hidden submit button for form submission */}
+      <Button type="submit" display="none" />
     </Box>
   );
-}
+});
+
+DynamicForm.displayName = 'DynamicForm';

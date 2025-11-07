@@ -9,22 +9,52 @@ export const theme = extendTheme({
   config,
   colors: {
     brand: {
-      50: '#e3f2fd',
-      100: '#bbdefb',
-      200: '#90caf9',
-      300: '#64b5f6',
-      400: '#42a5f5',
-      500: '#2196f3',
-      600: '#1e88e5',
-      700: '#1976d2',
-      800: '#1565c0',
-      900: '#0d47a1',
+      50: '#f0f7e8',
+      100: '#d4eecd',
+      200: '#b7db25',
+      300: '#a8d01f',
+      400: '#8fc316',
+      500: '#7dbd07',
+      600: '#589507',
+      700: '#50732f',
+      800: '#3d5723',
+      900: '#2a3b18',
+    },
+    primary: {
+      50: '#f0f7e8',
+      100: '#d4eecd',
+      200: '#b7db25',
+      300: '#a8d01f',
+      400: '#8fc316',
+      500: '#7dbd07',
+      600: '#589507',
+      700: '#50732f',
+      800: '#3d5723',
+      900: '#2a3b18',
+    },
+    accent: {
+      50: '#fcfde8',
+      100: '#f5f8b8',
+      200: '#e8f087',
+      300: '#dae956',
+      400: '#cde225',
+      500: '#b7db25',
+      600: '#9abd1d',
+      700: '#7d9f16',
+      800: '#60810e',
+      900: '#436307',
     },
     success: {
       50: '#e8f5e9',
       100: '#c8e6c9',
-      500: '#4caf50',
-      600: '#43a047',
+      200: '#a5d6a7',
+      300: '#81c784',
+      400: '#66bb6a',
+      500: '#589507',
+      600: '#50732f',
+      700: '#388e3c',
+      800: '#2e7d32',
+      900: '#1b5e20',
     },
     warning: {
       50: '#fff3e0',
@@ -46,7 +76,47 @@ export const theme = extendTheme({
   components: {
     Button: {
       defaultProps: {
-        colorScheme: 'brand',
+        colorScheme: 'primary',
+      },
+      variants: {
+        solid: (props: any) => ({
+          bg: props.colorScheme === 'primary' ? 'primary.500' : undefined,
+          color: 'white',
+          _hover: {
+            bg: props.colorScheme === 'primary' ? 'primary.600' : undefined,
+          },
+          _active: {
+            bg: props.colorScheme === 'primary' ? 'primary.700' : undefined,
+          },
+        }),
+      },
+    },
+    Badge: {
+      variants: {
+        solid: (props: any) => ({
+          bg: props.colorScheme === 'primary' ? 'primary.500' : undefined,
+          color: 'white',
+        }),
+      },
+    },
+    Input: {
+      defaultProps: {
+        focusBorderColor: 'primary.500',
+      },
+    },
+    Select: {
+      defaultProps: {
+        focusBorderColor: 'primary.500',
+      },
+    },
+    Textarea: {
+      defaultProps: {
+        focusBorderColor: 'primary.500',
+      },
+    },
+    Tabs: {
+      defaultProps: {
+        colorScheme: 'primary',
       },
     },
   },
