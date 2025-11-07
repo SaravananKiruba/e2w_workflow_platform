@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Button, Container, FormControl, FormLabel, Heading, Input, VStack, Text, useToast } from '@chakra-ui/react';
+import { Box, Button, Container, FormControl, FormLabel, Heading, Input, VStack, Text, useToast, HStack } from '@chakra-ui/react';
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -22,7 +22,6 @@ export default function SignIn() {
     setIsLoading(true);
 
     try {
-      // Use redirect: true to let NextAuth handle the redirect automatically
       const result = await signIn('credentials', {
         email,
         password,
@@ -30,8 +29,6 @@ export default function SignIn() {
         callbackUrl: callbackUrl,
       });
 
-      // If we get here with redirect: true, something went wrong
-      // signIn with redirect: true should not return control here on success
       if (!result || result.error) {
         console.log('[SIGNIN] Login failed:', result?.error);
         toast({
@@ -56,55 +53,136 @@ export default function SignIn() {
     }
   };
 
-  const handleGoogleSignIn = () => {
-    signIn('google', { callbackUrl });
-  };
-
   return (
-    <Container maxW="md" py={20}>
-      <VStack spacing={8}>
-        <Heading>Sign In to Easy2Work</Heading>
-        <Box w="full" p={8} borderWidth={1} borderRadius="lg">
-          <form onSubmit={handleSubmit}>
-            <VStack spacing={4}>
-              <FormControl isRequired>
-                <FormLabel>Email</FormLabel>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                />
-              </FormControl>
-              <FormControl isRequired>
-                <FormLabel>Password</FormLabel>
-                <Input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                />
-              </FormControl>
-              <Button
-                type="submit"
-                colorScheme="brand"
-                w="full"
-                isLoading={isLoading}
-              >
-                Sign In
-              </Button>
-              <Text>or</Text>
-              <Button
-                w="full"
-                variant="outline"
-                onClick={handleGoogleSignIn}
-              >
-                Sign in with Google
-              </Button>
+    <Box
+      minH="100vh"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      bgGradient="linear(to-br, blue.50, purple.50, pink.50)"
+      px={4}
+    >
+      <Container maxW="md">
+        <VStack spacing={8}>
+          {/* Logo & Branding */}
+          <VStack spacing={2} textAlign="center">
+            <Box
+              fontSize="5xl"
+              fontWeight="bold"
+              bgGradient="linear(to-r, blue.500, purple.600)"
+              bgClip="text"
+            >
+              💼 Easy2Work
+            </Box>
+            <Heading
+              as="h1"
+              size="lg"
+              color="gray.700"
+              fontWeight="600"
+            >
+              CRM Platform
+            </Heading>
+            <Text color="gray.600" fontSize="sm">
+              Manage your entire sales pipeline in one place
+            </Text>
+          </VStack>
+
+          {/* Login Card */}
+          <Box
+            w="full"
+            p={8}
+            borderRadius="2xl"
+            bg="white"
+            shadow="2xl"
+            border="1px"
+            borderColor="gray.100"
+          >
+            <form onSubmit={handleSubmit}>
+              <VStack spacing={5}>
+                <Text fontSize="2xl" fontWeight="bold" color="gray.800" mb={2}>
+                  Sign In
+                </Text>
+
+                <FormControl isRequired>
+                  <FormLabel color="gray.700" fontWeight="500">Email Address</FormLabel>
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@company.com"
+                    size="lg"
+                    borderRadius="lg"
+                    focusBorderColor="blue.500"
+                    _hover={{ borderColor: 'gray.300' }}
+                  />
+                </FormControl>
+
+                <FormControl isRequired>
+                  <FormLabel color="gray.700" fontWeight="500">Password</FormLabel>
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    size="lg"
+                    borderRadius="lg"
+                    focusBorderColor="blue.500"
+                    _hover={{ borderColor: 'gray.300' }}
+                  />
+                </FormControl>
+
+                <Button
+                  type="submit"
+                  colorScheme="blue"
+                  size="lg"
+                  width="full"
+                  isLoading={isLoading}
+                  loadingText="Signing in..."
+                  borderRadius="lg"
+                  bgGradient="linear(to-r, blue.500, purple.600)"
+                  _hover={{
+                    bgGradient: 'linear(to-r, blue.600, purple.700)',
+                    transform: 'translateY(-2px)',
+                    shadow: 'lg',
+                  }}
+                  transition="all 0.2s"
+                >
+                  Sign In
+                </Button>
+              </VStack>
+            </form>
+          </Box>
+
+          {/* Demo Credentials */}
+          <Box
+            p={4}
+            bg="white"
+            borderRadius="lg"
+            border="1px"
+            borderColor="blue.100"
+            w="full"
+          >
+            <VStack spacing={2} align="start">
+              <HStack>
+                <Text fontSize="sm" fontWeight="bold" color="blue.600">
+                  🔑 Demo Credentials:
+                </Text>
+              </HStack>
+              <Text fontSize="sm" color="gray.600" fontFamily="mono">
+                📧 demo@easy2work.com
+              </Text>
+              <Text fontSize="sm" color="gray.600" fontFamily="mono">
+                🔒 demo@123
+              </Text>
             </VStack>
-          </form>
-        </Box>
-      </VStack>
-    </Container>
+          </Box>
+
+          {/* Footer */}
+          <Text fontSize="xs" color="gray.500" textAlign="center">
+            Lead → Client → Quotation → Order → Invoice → Payment
+          </Text>
+        </VStack>
+      </Container>
+    </Box>
   );
 }
