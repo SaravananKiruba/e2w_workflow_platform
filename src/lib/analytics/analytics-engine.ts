@@ -348,4 +348,141 @@ export class AnalyticsEngine {
         ),
       }));
   }
+
+  /**
+   * Calculate outstanding amount (unpaid invoices)
+   */
+  static async calculateOutstandingAmount(tenantId: string): Promise<number> {
+    const invoices = await prisma.dynamicRecord.findMany({
+      where: {
+        tenantId,
+        moduleName: 'Invoices',
+        status: 'active',
+      },
+    });
+
+    return invoices.reduce((total, invoice) => {
+      const data = JSON.parse(invoice.data);
+      if (data.paymentStatus === 'Pending' || data.paymentStatus === 'Overdue') {
+        return total + (data.totalAmount || 0);
+      }
+      return total;
+    }, 0);
+  }
+
+  /**
+   * Calculate total paid revenue (completed invoices)
+   */
+  static async calculatePaidRevenue(tenantId: string): Promise<number> {
+    const invoices = await prisma.dynamicRecord.findMany({
+      where: {
+        tenantId,
+        moduleName: 'Invoices',
+        status: 'active',
+      },
+    });
+
+    return invoices.reduce((total, invoice) => {
+      const data = JSON.parse(invoice.data);
+      if (data.paymentStatus === 'Paid') {
+        return total + (data.totalAmount || 0);
+      }
+      return total;
+    }, 0);
+  }
+
+  /**
+   * Count pending quotations (not converted)
+   */
+  static async countPendingQuotations(tenantId: string): Promise<number> {
+    const quotations = await prisma.dynamicRecord.findMany({
+      where: {
+        tenantId,
+        moduleName: 'Quotations',
+        status: 'active',
+      },
+    });
+
+    return quotations.filter(quot => {
+      const data = JSON.parse(quot.data);
+      return data.status === 'Draft' || data.status === 'Sent';
+    }).length;
+  }
+
+  /**
+   * Count pending orders (not invoiced)
+   */
+  static async countPendingOrders(tenantId: string): Promise<number> {
+    const orders = await prisma.dynamicRecord.findMany({
+      where: {
+        tenantId,
+        moduleName: 'Orders',
+        status: 'active',
+      },
+    });
+
+    return orders.filter(ord => {
+      const data = JSON.parse(ord.data);
+      return data.status === 'Pending' || data.status === 'Confirmed';
+    }).length;
+  }
+
+  /**
+   * Get finance dashboard metrics
+   */
+  static async getFinanceDashboardMetrics(tenantId: string) {
+    const today = new Date();
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const last30Days = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const [
+      paidRevenue,
+      outstandingAmount,
+      pendingQuotations,
+      pendingOrders,
+      overdueInvoices,
+      revenueTrend,
+      topClients,
+      totalInvoices,
+      pendingInvoicesCount,
+    ] = await Promise.all([
+      this.calculatePaidRevenue(tenantId),
+      this.calculateOutstandingAmount(tenantId),
+      this.countPendingQuotations(tenantId),
+      this.countPendingOrders(tenantId),
+      this.getOverdueInvoices(tenantId),
+      this.getRevenueTrend(tenantId, last30Days, today),
+      this.getTopClientsByRevenue(tenantId, thisMonthStart, thisMonthEnd, 5),
+      prisma.dynamicRecord.count({
+        where: { tenantId, moduleName: 'Invoices', status: 'active' },
+      }),
+      this.countPendingInvoices(tenantId),
+    ]);
+
+    const overdueAmount = overdueInvoices.reduce(
+      (sum, inv) => sum + (inv.totalAmount || 0),
+      0
+    );
+
+    return {
+      kpis: {
+        paidRevenue: Math.round(paidRevenue * 100) / 100,
+        outstandingAmount: Math.round(outstandingAmount * 100) / 100,
+        pendingQuotations,
+        pendingOrders,
+        overdueInvoices: overdueInvoices.length,
+        overdueAmount: Math.round(overdueAmount * 100) / 100,
+        totalInvoices,
+        pendingInvoicesCount,
+      },
+      charts: {
+        revenueTrend,
+        topClients,
+      },
+      alerts: {
+        overdueInvoices: overdueInvoices.slice(0, 10), // Top 10 overdue
+      },
+    };
+  }
 }

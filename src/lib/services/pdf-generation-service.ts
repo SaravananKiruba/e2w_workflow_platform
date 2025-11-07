@@ -121,18 +121,20 @@ export class PDFGenerationService {
     tenantSettings: TenantSettings
   ): Promise<Buffer> {
     try {
-      // TODO: Create InvoiceDocument component
-      // For now, throw not implemented error
-      throw new Error('Invoice PDF generation not yet implemented. Please create InvoiceDocument component.');
+      // Import the PDF document component dynamically
+      const { InvoiceDocument } = await import('@/components/pdf-templates');
       
-      // Uncomment when InvoiceDocument is created:
-      // const { InvoiceDocument } = await import('@/components/pdf-templates');
-      // const document = React.createElement(InvoiceDocument, {
-      //   invoice: invoiceData,
-      //   tenant: tenantSettings,
-      // });
-      // const pdfBuffer = await renderToBuffer(document as any);
-      // return pdfBuffer;
+      // Create React element - the component returns a Document
+      const document = React.createElement(InvoiceDocument, {
+        invoice: invoiceData,
+        tenant: tenantSettings,
+      });
+      
+      // Render the PDF document to buffer - cast to any to bypass type checking
+      // as the component internally returns a Document element
+      const pdfBuffer = await renderToBuffer(document as any);
+      
+      return pdfBuffer;
     } catch (error) {
       console.error('Error generating invoice PDF:', error);
       throw new Error('Failed to generate invoice PDF');

@@ -5,4 +5,4 @@
  */
 
 export { QuotationDocument } from './QuotationDocument';
-// export { InvoiceDocument } from './InvoiceDocument'; // TODO: Create InvoiceDocument component
+export { InvoiceDocument } from './InvoiceDocument';
