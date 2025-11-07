@@ -420,6 +420,7 @@ export default function FieldBuilderPage() {
                     field={selectedField || null}
                     onFieldUpdate={handleFieldUpdate}
                     onClose={() => setSelectedFieldId(undefined)}
+                    availableFields={fields.map(f => f.name)}
                   />
                 </GridItem>
               </Grid>

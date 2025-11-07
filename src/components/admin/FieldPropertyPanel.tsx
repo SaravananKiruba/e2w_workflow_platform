@@ -26,6 +26,9 @@ import {
   Icon,
 } from '@chakra-ui/react';
 import { FiX, FiPlus, FiTrash2 } from 'react-icons/fi';
+import ValidationRuleBuilder, { ValidationRule as ValidationRuleType } from './ValidationRuleBuilder';
+import ValidationRuleTester from './ValidationRuleTester';
+import DependencyConfigurator, { DependencyRule } from './DependencyConfigurator';
 
 interface FieldDefinition {
   id: string;
@@ -43,12 +46,19 @@ interface FieldDefinition {
   options?: OptionItem[];
   lookupConfig?: LookupConfig;
   tableConfig?: TableConfig;
+  dependencies?: DependencyRule[];
 }
 
 interface ValidationRule {
+  id?: string;
   type: string;
   value?: any;
   message?: string;
+  condition?: {
+    field: string;
+    operator: string;
+    value: string;
+  };
 }
 
 interface OptionItem {
@@ -70,12 +80,14 @@ interface FieldPropertyPanelProps {
   field: FieldDefinition | null;
   onFieldUpdate: (field: FieldDefinition) => void;
   onClose: () => void;
+  availableFields?: string[];
 }
 
 export default function FieldPropertyPanel({
   field,
   onFieldUpdate,
   onClose,
+  availableFields = [],
 }: FieldPropertyPanelProps) {
   const [localField, setLocalField] = useState<FieldDefinition | null>(field);
 
@@ -186,6 +198,14 @@ export default function FieldPropertyPanel({
               {localField.validation && localField.validation.length > 0 && (
                 <Badge ml={2} colorScheme="blue">
                   {localField.validation.length}
+                </Badge>
+              )}
+            </Tab>
+            <Tab>
+              Dependencies
+              {localField.dependencies && localField.dependencies.length > 0 && (
+                <Badge ml={2} colorScheme="purple">
+                  {localField.dependencies.length}
                 </Badge>
               )}
             </Tab>
@@ -387,94 +407,50 @@ export default function FieldPropertyPanel({
             {/* Validation Rules */}
             <TabPanel>
               <VStack spacing={4} align="stretch">
-                <HStack>
-                  <Text fontWeight="semibold" flex={1}>
-                    Validation Rules
-                  </Text>
-                  <Button
-                    size="sm"
-                    leftIcon={<FiPlus />}
-                    onClick={addValidation}
-                    colorScheme="blue"
-                  >
-                    Add Rule
-                  </Button>
-                </HStack>
+                <ValidationRuleBuilder
+                  rules={
+                    (localField.validation || []).map((v, idx) => ({
+                      id: v.id || `rule-${idx}`,
+                      type: v.type as ValidationRuleType['type'],
+                      value: v.value,
+                      message: v.message,
+                      condition: v.condition as ValidationRuleType['condition'],
+                    }))
+                  }
+                  onChange={(rules) => {
+                    handleChange('validation', rules);
+                  }}
+                  availableFields={availableFields}
+                  dataType={localField.dataType}
+                />
 
-                {(localField.validation || []).map((validation, index) => (
-                  <Box
-                    key={index}
-                    p={3}
-                    border="1px solid"
-                    borderColor={borderColor}
-                    borderRadius="md"
-                  >
-                    <VStack spacing={3} align="stretch">
-                      <HStack>
-                        <FormControl flex={1}>
-                          <FormLabel fontSize="sm">Validation Type</FormLabel>
-                          <Select
-                            value={validation.type}
-                            onChange={(e) => updateValidation(index, 'type', e.target.value)}
-                            size="sm"
-                          >
-                            <option value="required">Required</option>
-                            <option value="minLength">Min Length</option>
-                            <option value="maxLength">Max Length</option>
-                            <option value="pattern">Pattern (Regex)</option>
-                            <option value="email">Email Format</option>
-                            <option value="url">URL Format</option>
-                            <option value="min">Min Value</option>
-                            <option value="max">Max Value</option>
-                          </Select>
-                        </FormControl>
-                        <IconButton
-                          aria-label="Remove validation"
-                          icon={<FiTrash2 />}
-                          size="sm"
-                          colorScheme="red"
-                          variant="ghost"
-                          onClick={() => removeValidation(index)}
-                          mt={6}
-                        />
-                      </HStack>
+                <Divider />
 
-                      {validation.type !== 'required' &&
-                        validation.type !== 'email' &&
-                        validation.type !== 'url' && (
-                          <FormControl>
-                            <FormLabel fontSize="sm">Value</FormLabel>
-                            <Input
-                              value={validation.value || ''}
-                              onChange={(e) => updateValidation(index, 'value', e.target.value)}
-                              size="sm"
-                              placeholder={
-                                validation.type === 'pattern'
-                                  ? 'e.g., ^[A-Z]{3}$'
-                                  : 'Enter value'
-                              }
-                            />
-                          </FormControl>
-                        )}
+                <ValidationRuleTester
+                  rules={
+                    (localField.validation || []).map((v, idx) => ({
+                      id: v.id || `rule-${idx}`,
+                      type: v.type as ValidationRuleType['type'],
+                      value: v.value,
+                      message: v.message,
+                      condition: v.condition as ValidationRuleType['condition'],
+                    }))
+                  }
+                  fieldName={localField.name}
+                  dataType={localField.dataType}
+                />
+              </VStack>
+            </TabPanel>
 
-                      <FormControl>
-                        <FormLabel fontSize="sm">Error Message</FormLabel>
-                        <Input
-                          value={validation.message || ''}
-                          onChange={(e) => updateValidation(index, 'message', e.target.value)}
-                          size="sm"
-                          placeholder="Custom error message"
-                        />
-                      </FormControl>
-                    </VStack>
-                  </Box>
-                ))}
-
-                {(!localField.validation || localField.validation.length === 0) && (
-                  <Text fontSize="sm" color="gray.500" textAlign="center" py={4}>
-                    No validation rules configured
-                  </Text>
-                )}
+            {/* Dependencies */}
+            <TabPanel>
+              <VStack spacing={4} align="stretch">
+                <DependencyConfigurator
+                  dependencies={localField.dependencies || []}
+                  onChange={(deps) => handleChange('dependencies', deps)}
+                  availableFields={availableFields}
+                  currentFieldName={localField.name}
+                />
               </VStack>
             </TabPanel>
 
