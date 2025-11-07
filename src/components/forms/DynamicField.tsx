@@ -3,7 +3,7 @@
 import { Input, Textarea, NumberInput, NumberInputField, Select, Checkbox, FormControl, FormLabel, FormErrorMessage, FormHelperText, Spinner, HStack, Button, Box, VStack } from '@chakra-ui/react';
 import { FieldDefinition } from '@/types/metadata';
 import { TableField } from './TableField';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 
 interface DynamicFieldProps {
@@ -18,6 +18,31 @@ export function DynamicField({ field, value, onChange, onCascadePopulate, error 
   const { data: session } = useSession();
   const [lookupOptions, setLookupOptions] = useState<any[]>([]);
   const [lookupLoading, setLookupLoading] = useState(false);
+  const selectRef = useRef<HTMLSelectElement>(null);
+  const [internalValue, setInternalValue] = useState<any>(value);
+
+  // Debug: Track what causes re-renders
+  const renderCountRef = useRef(0);
+  renderCountRef.current++;
+  
+  // Sync internal value when prop changes (but only if it's a real change, not a stale state)
+  useEffect(() => {
+    if (value !== undefined && value !== internalValue) {
+      console.log(`[DynamicField ${field.name}] � Syncing value from parent:`, internalValue, '→', value);
+      setInternalValue(value);
+    }
+  }, [value, field.name]);
+  
+  useEffect(() => {
+    if (field.uiType === 'lookup') {
+      console.log(`[DynamicField ${field.name}] 🔄 COMPONENT RE-RENDER #${renderCountRef.current}`, {
+        valueProp: value,
+        internalValue: internalValue,
+        optionsCount: lookupOptions.length,
+        loading: lookupLoading
+      });
+    }
+  });
 
   // Debug: Log when value prop changes (only for lookup fields with actual changes)
   useEffect(() => {
@@ -129,10 +154,10 @@ export function DynamicField({ field, value, onChange, onCascadePopulate, error 
   const handleChange = (newValue: any) => {
     console.log(`[DynamicField ${field.name}] � handleChange CALLED:`, {
       fieldName: field.name,
-      oldValue: value,
+      oldValue: internalValue,
       newValue: newValue,
-      valueChanged: newValue !== value,
-      oldType: typeof value,
+      valueChanged: newValue !== internalValue,
+      oldType: typeof internalValue,
       newType: typeof newValue
     });
     
@@ -165,15 +190,24 @@ export function DynamicField({ field, value, onChange, onCascadePopulate, error 
   const renderInput = () => {
     switch (field.uiType) {
       case 'lookup':
-        // Normalize value to string for select element
-        const selectValue = value === null || value === undefined ? '' : String(value);
-        const matchingOption = lookupOptions.find(o => o.value === value);
+        // Use internal value to maintain state
+        const selectValue = internalValue === null || internalValue === undefined ? '' : String(internalValue);
+        const matchingOption = lookupOptions.find(o => String(o.value) === String(internalValue));
+        
+        console.log(`[DynamicField ${field.name}] 🎯 Rendering lookup field:`, {
+          currentValue: internalValue,
+          selectValue: selectValue,
+          hasMatchingOption: !!matchingOption,
+          matchingLabel: matchingOption?.label,
+          optionsCount: lookupOptions.length,
+          firstOption: lookupOptions[0] ? { label: lookupOptions[0].label, value: lookupOptions[0].value } : null
+        });
         
         // Only log when there's a potential issue or during selection
-        if (!lookupLoading && lookupOptions.length === 0 && !matchingOption && value) {
+        if (!lookupLoading && lookupOptions.length === 0 && !matchingOption && internalValue) {
           console.warn(`[DynamicField ${field.name}] ⚠️ Value set but no matching option:`, {
-            currentValue: value,
-            valueType: typeof value,
+            currentValue: internalValue,
+            valueType: typeof internalValue,
             optionsCount: lookupOptions.length
           });
         }
@@ -181,39 +215,66 @@ export function DynamicField({ field, value, onChange, onCascadePopulate, error 
         return (
           <VStack align="stretch" spacing={2}>
             <HStack>
-              <Box flex={1}>
+              <Box flex={1} position="relative">
                 <select
+                  ref={selectRef}
+                  name={field.name}
+                  id={`select-${field.name}`}
                   value={selectValue}
                   onChange={(e) => {
+                    console.log(`[DynamicField ${field.name}] 🚨 onChange TRIGGERED! Render #${renderCountRef.current}`);
+                    
                     const selectedValue = e.target.value;
-                    const selectedOption = lookupOptions.find(o => o.value === selectedValue);
+                    console.log(`[DynamicField ${field.name}] Raw value from event:`, selectedValue);
+                    
+                    const selectedOption = lookupOptions.find(o => String(o.value) === selectedValue);
                     
                     console.log(`[DynamicField ${field.name}] 📝 SELECT onChange FIRED:`, {
                       rawEventValue: e.target.value,
                       selectedValue: selectedValue,
                       isEmpty: selectedValue === '',
-                      fromValue: value,
-                      toValue: selectedValue || null,
+                      fromValue: internalValue,
+                      toValue: selectedValue === '' ? null : selectedValue,
                       selectedLabel: selectedOption?.label || '(none)',
                       allOptions: lookupOptions.map(o => `${o.label}=${o.value}`)
                     });
                     
-                    // Pass empty string as-is or the selected value
-                    // The form will handle empty strings appropriately
-                    handleChange(selectedValue || null);
+                    // Update internal state immediately
+                    const newValue = selectedValue === '' ? null : selectedValue;
+                    setInternalValue(newValue);
+                    console.log(`[DynamicField ${field.name}] ⚡ Calling handleChange with:`, newValue);
+                    handleChange(newValue);
+                  }}
+                  onFocus={(e) => {
+                    console.log(`[DynamicField ${field.name}] 🎯 SELECT FOCUSED`);
+                  }}
+                  onBlur={(e) => {
+                    console.log(`[DynamicField ${field.name}] 👋 SELECT BLURRED, value:`, e.target.value);
+                  }}
+                  onClick={(e) => {
+                    console.log(`[DynamicField ${field.name}] 🖱️ SELECT CLICKED`);
+                  }}
+                  onMouseDown={(e) => {
+                    console.log(`[DynamicField ${field.name}] 🖱️ SELECT MOUSE DOWN`);
                   }}
                   disabled={lookupLoading}
+                  className="lookup-select"
                   style={{
                     width: '100%',
                     padding: '8px',
-                    border: '1px solid #E2E8F0',
+                    border: '2px solid #3182CE',
                     borderRadius: '6px',
-                    fontSize: '16px'
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                    backgroundColor: 'white',
+                    appearance: 'auto',
+                    WebkitAppearance: 'menulist',
+                    MozAppearance: 'menulist'
                   }}
                 >
                   <option value="">{field.placeholder || 'Select...'}</option>
                   {lookupOptions.map((option: any) => (
-                    <option key={option.value} value={option.value}>
+                    <option key={option.value} value={String(option.value)}>
                       {option.label}
                     </option>
                   ))}
@@ -296,6 +357,7 @@ export function DynamicField({ field, value, onChange, onCascadePopulate, error 
             onChange={(e) => handleChange(e.target.value)}
             placeholder={field.placeholder || 'Select...'}
           >
+            <option value="">{field.placeholder || 'Select...'}</option>
             {field.config?.options?.map((option: any) => {
               const optionValue = typeof option === 'string' ? option : option.value;
               const optionLabel = typeof option === 'string' ? option : option.label;

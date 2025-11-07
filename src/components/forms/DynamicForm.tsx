@@ -22,6 +22,15 @@ export const DynamicForm = forwardRef<DynamicFormRef, DynamicFormProps>(
   const [formData, setFormData] = useState<Record<string, any>>(initialData);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Debug: Track formData changes
+  useEffect(() => {
+    console.log('[DynamicForm] 📊 formData STATE CHANGED:', {
+      keys: Object.keys(formData),
+      values: formData,
+      isEmpty: Object.keys(formData).length === 0
+    });
+  }, [formData]);
+
   // Auto-calculate GST whenever relevant fields change
   useEffect(() => {
     // Check if this module uses GST fields
@@ -104,17 +113,24 @@ export const DynamicForm = forwardRef<DynamicFormRef, DynamicFormProps>(
       newType: typeof value
     });
     
-    const newData = { ...formData, [name]: value };
-    console.log(`[DynamicForm] 📦 Setting new formData state:`, {
-      fieldChanged: name,
-      newFieldValue: value,
-      fullFormData: newData
+    setFormData(prevData => {
+      const newData = { ...prevData, [name]: value };
+      console.log(`[DynamicForm] 📦 Setting new formData state:`, {
+        fieldChanged: name,
+        newFieldValue: value,
+        fullFormData: newData
+      });
+      onChange?.(newData);
+      return newData;
     });
     
-    setFormData(newData);
-    onChange?.(newData);
-    
     console.log(`[DynamicForm] ✅ State update dispatched for field: ${name}`);
+    console.log(`[DynamicForm] 📊 Current formData after update:`, formData);
+    
+    // Verify the state will update in next render
+    setTimeout(() => {
+      console.log(`[DynamicForm] 🔍 FormData in next tick (${name}):`, formData[name], '→', value);
+    }, 0);
     
     // Clear error for this field
     if (errors[name]) {
@@ -123,24 +139,35 @@ export const DynamicForm = forwardRef<DynamicFormRef, DynamicFormProps>(
   };
 
   const handleCascadePopulate = (fields: Record<string, any>) => {
-    const changedFields = Object.entries(fields)
-      .filter(([key, val]) => formData[key] !== val)
-      .map(([key]) => key);
-    
-    if (changedFields.length > 0) {
-      console.log(`[DynamicForm] 🔗 Cascade populating ${changedFields.length} fields:`, changedFields.join(', '));
-    }
-    
-    const newData = { ...formData, ...fields };
-    setFormData(newData);
-    onChange?.(newData);
+    setFormData(prevData => {
+      const changedFields = Object.entries(fields)
+        .filter(([key, val]) => prevData[key] !== val)
+        .map(([key]) => key);
+      
+      if (changedFields.length > 0) {
+        console.log(`[DynamicForm] 🔗 Cascade populating ${changedFields.length} fields:`, changedFields.join(', '));
+      }
+      
+      const newData = { ...prevData, ...fields };
+      onChange?.(newData);
+      return newData;
+    });
   };
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
 
+    console.log('[DynamicForm] 🔍 VALIDATING - Current formData:', formData);
+
     config.fields.forEach(field => {
       const value = formData[field.name];
+
+      console.log(`[DynamicForm] Validating field ${field.name}:`, {
+        value: value,
+        isRequired: field.isRequired,
+        hasValue: !!value,
+        willError: field.isRequired && !value
+      });
 
       // Required validation
       if (field.isRequired && !value) {
@@ -176,6 +203,14 @@ export const DynamicForm = forwardRef<DynamicFormRef, DynamicFormProps>(
         // Validate reference exists (can be done async in a separate step)
         // For now, just validate that value is not empty
       }
+    });
+
+    console.log('[DynamicForm] 🔍 VALIDATION COMPLETE:', {
+      totalFields: config.fields.length,
+      errorCount: Object.keys(newErrors).length,
+      errors: newErrors,
+      formDataKeys: Object.keys(formData),
+      formDataSample: Object.entries(formData).slice(0, 5)
     });
 
     setErrors(newErrors);
