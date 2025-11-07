@@ -23,6 +23,8 @@ async function main() {
     { category: 'field_types', name: 'radio', label: 'Radio Button', description: 'Select one option', config: JSON.stringify({ options: [] }) },
     { category: 'field_types', name: 'file', label: 'File Upload', description: 'File attachment', config: JSON.stringify({ maxSize: 10485760, accept: '*' }) },
     { category: 'field_types', name: 'formula', label: 'Formula', description: 'Calculated field', config: JSON.stringify({ expression: '' }) },
+    { category: 'field_types', name: 'lookup', label: 'Lookup/Reference', description: 'Link to records in another module', config: JSON.stringify({ targetModule: '', displayField: '', searchFields: [] }) },
+    { category: 'field_types', name: 'table', label: 'Table/Line Items', description: 'Nested table with multiple rows', config: JSON.stringify({ columns: [], allowAdd: true, allowDelete: true, allowEdit: true }) },
   ]
 
   const uiComponents = [
@@ -129,6 +131,35 @@ async function main() {
   })
 
   console.log('✅ Demo user created:', demoUser.email)
+
+  // Initialize auto-numbering sequences for demo tenant
+  const autoNumberModules = [
+    { moduleName: 'Quotations', prefix: 'QT', format: '{prefix}-{padded:5}' },
+    { moduleName: 'Orders', prefix: 'ORD', format: '{prefix}-{padded:5}' },
+    { moduleName: 'Invoices', prefix: 'INV', format: '{prefix}/{year}/{padded:3}' },
+    { moduleName: 'Payments', prefix: 'TXN', format: '{prefix}-{padded:5}' },
+  ];
+
+  for (const module of autoNumberModules) {
+    await prisma.autoNumberSequence.upsert({
+      where: {
+        tenantId_moduleName: {
+          tenantId: demoTenant.id,
+          moduleName: module.moduleName,
+        },
+      },
+      update: {},
+      create: {
+        tenantId: demoTenant.id,
+        moduleName: module.moduleName,
+        prefix: module.prefix,
+        format: module.format,
+        nextNumber: 1,
+      },
+    });
+  }
+
+  console.log('✅ Auto-numbering sequences initialized for demo tenant')
 
   console.log('🎉 Seeding completed!')
 }

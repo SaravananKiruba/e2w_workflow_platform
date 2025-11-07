@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTenantContext } from '@/lib/tenant-context';
 import { DynamicRecordService } from '@/lib/modules/dynamic-record-service';
+import { AutoNumberingService } from '@/lib/services/auto-numbering-service';
 import { z } from 'zod';
 
 export async function GET(
@@ -50,12 +51,79 @@ export async function POST(
   try {
     const body = await req.json();
 
+    // Auto-generate number for modules that support it
+    const modulesWithAutoNumber = ['Quotations', 'Orders', 'Invoices', 'Payments'];
+    const numberFieldMap: Record<string, string> = {
+      'Quotations': 'quotationNumber',
+      'Orders': 'orderNumber',
+      'Invoices': 'invoiceNumber',
+      'Payments': 'transactionId',
+    };
+
+    if (modulesWithAutoNumber.includes(params.moduleName) && !body[numberFieldMap[params.moduleName]]) {
+      const generatedNumber = await AutoNumberingService.generateNumber(
+        context.tenantId,
+        params.moduleName
+      );
+      body[numberFieldMap[params.moduleName]] = generatedNumber;
+    }
+
     const record = await DynamicRecordService.createRecord(
       context.tenantId,
       params.moduleName,
       body,
       context.userId
     );
+
+    // Special handling: When payment is created, mark invoice as 'Paid'
+    if (params.moduleName === 'Payments' && body.invoiceId) {
+      try {
+        const { prisma } = await import('@/lib/prisma');
+        
+        // Fetch the invoice
+        const invoiceRecord = await prisma.dynamicRecord.findUnique({
+          where: { id: body.invoiceId },
+        });
+
+        if (invoiceRecord && invoiceRecord.tenantId === context.tenantId) {
+          const invoiceData = JSON.parse(invoiceRecord.data);
+          
+          // Update invoice status to 'Paid'
+          await prisma.dynamicRecord.update({
+            where: { id: body.invoiceId },
+            data: {
+              data: JSON.stringify({
+                ...invoiceData,
+                status: 'Paid',
+                paidDate: new Date().toISOString(),
+                paidAmount: body.amount || body.paymentAmount,
+              }),
+              updatedBy: context.userId,
+            },
+          });
+
+          // Audit log
+          await prisma.auditLog.create({
+            data: {
+              tenantId: context.tenantId,
+              userId: context.userId,
+              action: 'payment_received',
+              entity: 'Invoices',
+              entityId: body.invoiceId,
+              metadata: JSON.stringify({
+                invoiceId: body.invoiceId,
+                paymentId: record.id,
+                amount: body.amount || body.paymentAmount,
+                transactionId: body.transactionId,
+              }),
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Error updating invoice status:', error);
+        // Don't fail the payment creation if invoice update fails
+      }
+    }
 
     return NextResponse.json({ record }, { status: 201 });
   } catch (error: any) {
