@@ -1,0 +1,512 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import {
+  Box,
+  VStack,
+  HStack,
+  Heading,
+  FormControl,
+  FormLabel,
+  Input,
+  Textarea,
+  Switch,
+  Select,
+  Button,
+  Divider,
+  Text,
+  IconButton,
+  useColorModeValue,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  Badge,
+  Icon,
+} from '@chakra-ui/react';
+import { FiX, FiPlus, FiTrash2 } from 'react-icons/fi';
+
+interface FieldDefinition {
+  id: string;
+  name: string;
+  label: string;
+  dataType: string;
+  uiType: string;
+  placeholder?: string;
+  helpText?: string;
+  required?: boolean;
+  readOnly?: boolean;
+  hidden?: boolean;
+  defaultValue?: any;
+  validation?: ValidationRule[];
+  options?: OptionItem[];
+  lookupConfig?: LookupConfig;
+  tableConfig?: TableConfig;
+}
+
+interface ValidationRule {
+  type: string;
+  value?: any;
+  message?: string;
+}
+
+interface OptionItem {
+  label: string;
+  value: string;
+}
+
+interface LookupConfig {
+  targetModule: string;
+  displayField: string;
+  valueField?: string;
+}
+
+interface TableConfig {
+  columns: any[];
+}
+
+interface FieldPropertyPanelProps {
+  field: FieldDefinition | null;
+  onFieldUpdate: (field: FieldDefinition) => void;
+  onClose: () => void;
+}
+
+export default function FieldPropertyPanel({
+  field,
+  onFieldUpdate,
+  onClose,
+}: FieldPropertyPanelProps) {
+  const [localField, setLocalField] = useState<FieldDefinition | null>(field);
+
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+
+  useEffect(() => {
+    setLocalField(field);
+  }, [field]);
+
+  if (!localField) {
+    return (
+      <Box
+        bg={bgColor}
+        border="1px solid"
+        borderColor={borderColor}
+        borderRadius="lg"
+        p={6}
+        h="full"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+      >
+        <Text color="gray.500">Select a field to configure</Text>
+      </Box>
+    );
+  }
+
+  const handleChange = (key: keyof FieldDefinition, value: any) => {
+    const updatedField = { ...localField, [key]: value };
+    setLocalField(updatedField);
+  };
+
+  const handleSave = () => {
+    if (localField) {
+      onFieldUpdate(localField);
+    }
+  };
+
+  const addValidation = () => {
+    const validations = localField.validation || [];
+    handleChange('validation', [
+      ...validations,
+      { type: 'required', message: 'This field is required' },
+    ]);
+  };
+
+  const updateValidation = (index: number, key: string, value: any) => {
+    const validations = [...(localField.validation || [])];
+    validations[index] = { ...validations[index], [key]: value };
+    handleChange('validation', validations);
+  };
+
+  const removeValidation = (index: number) => {
+    const validations = [...(localField.validation || [])];
+    validations.splice(index, 1);
+    handleChange('validation', validations);
+  };
+
+  const addOption = () => {
+    const options = localField.options || [];
+    handleChange('options', [...options, { label: '', value: '' }]);
+  };
+
+  const updateOption = (index: number, key: 'label' | 'value', value: string) => {
+    const options = [...(localField.options || [])];
+    options[index] = { ...options[index], [key]: value };
+    handleChange('options', options);
+  };
+
+  const removeOption = (index: number) => {
+    const options = [...(localField.options || [])];
+    options.splice(index, 1);
+    handleChange('options', options);
+  };
+
+  return (
+    <Box
+      bg={bgColor}
+      border="1px solid"
+      borderColor={borderColor}
+      borderRadius="lg"
+      h="full"
+      display="flex"
+      flexDirection="column"
+    >
+      {/* Header */}
+      <HStack p={4} borderBottom="1px solid" borderColor={borderColor}>
+        <Heading size="md" flex={1}>
+          Field Properties
+        </Heading>
+        <IconButton
+          aria-label="Close panel"
+          icon={<FiX />}
+          size="sm"
+          variant="ghost"
+          onClick={onClose}
+        />
+      </HStack>
+
+      {/* Content */}
+      <Box flex={1} overflowY="auto" p={4}>
+        <Tabs colorScheme="blue">
+          <TabList>
+            <Tab>Basic</Tab>
+            <Tab>
+              Validation
+              {localField.validation && localField.validation.length > 0 && (
+                <Badge ml={2} colorScheme="blue">
+                  {localField.validation.length}
+                </Badge>
+              )}
+            </Tab>
+            <Tab>Advanced</Tab>
+          </TabList>
+
+          <TabPanels>
+            {/* Basic Properties */}
+            <TabPanel>
+              <VStack spacing={4} align="stretch">
+                <FormControl isRequired>
+                  <FormLabel>Field Name</FormLabel>
+                  <Input
+                    value={localField.name}
+                    onChange={(e) => handleChange('name', e.target.value)}
+                    placeholder="e.g., firstName"
+                  />
+                  <Text fontSize="xs" color="gray.500" mt={1}>
+                    Internal field identifier (camelCase, no spaces)
+                  </Text>
+                </FormControl>
+
+                <FormControl isRequired>
+                  <FormLabel>Field Label</FormLabel>
+                  <Input
+                    value={localField.label}
+                    onChange={(e) => handleChange('label', e.target.value)}
+                    placeholder="e.g., First Name"
+                  />
+                  <Text fontSize="xs" color="gray.500" mt={1}>
+                    Display label shown to users
+                  </Text>
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel>Data Type</FormLabel>
+                  <Select
+                    value={localField.dataType}
+                    onChange={(e) => handleChange('dataType', e.target.value)}
+                  >
+                    <option value="text">Text</option>
+                    <option value="number">Number</option>
+                    <option value="email">Email</option>
+                    <option value="url">URL</option>
+                    <option value="date">Date</option>
+                    <option value="datetime">Date & Time</option>
+                    <option value="boolean">Boolean</option>
+                    <option value="select">Select</option>
+                    <option value="multiselect">Multi-Select</option>
+                    <option value="lookup">Lookup</option>
+                    <option value="table">Table</option>
+                  </Select>
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel>Placeholder</FormLabel>
+                  <Input
+                    value={localField.placeholder || ''}
+                    onChange={(e) => handleChange('placeholder', e.target.value)}
+                    placeholder="e.g., Enter your first name"
+                  />
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel>Help Text</FormLabel>
+                  <Textarea
+                    value={localField.helpText || ''}
+                    onChange={(e) => handleChange('helpText', e.target.value)}
+                    placeholder="Additional guidance for users"
+                    rows={3}
+                  />
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel>Default Value</FormLabel>
+                  <Input
+                    value={localField.defaultValue || ''}
+                    onChange={(e) => handleChange('defaultValue', e.target.value)}
+                    placeholder="Default value (optional)"
+                  />
+                </FormControl>
+
+                <Divider />
+
+                <FormControl display="flex" alignItems="center">
+                  <FormLabel mb="0">Required Field</FormLabel>
+                  <Switch
+                    isChecked={localField.required || false}
+                    onChange={(e) => handleChange('required', e.target.checked)}
+                  />
+                </FormControl>
+
+                <FormControl display="flex" alignItems="center">
+                  <FormLabel mb="0">Read Only</FormLabel>
+                  <Switch
+                    isChecked={localField.readOnly || false}
+                    onChange={(e) => handleChange('readOnly', e.target.checked)}
+                  />
+                </FormControl>
+
+                <FormControl display="flex" alignItems="center">
+                  <FormLabel mb="0">Hidden</FormLabel>
+                  <Switch
+                    isChecked={localField.hidden || false}
+                    onChange={(e) => handleChange('hidden', e.target.checked)}
+                  />
+                </FormControl>
+
+                {/* Options for Select/MultiSelect */}
+                {(localField.dataType === 'select' || localField.dataType === 'multiselect') && (
+                  <Box>
+                    <HStack mb={2}>
+                      <FormLabel mb={0}>Options</FormLabel>
+                      <Button
+                        size="sm"
+                        leftIcon={<FiPlus />}
+                        onClick={addOption}
+                        colorScheme="blue"
+                        variant="ghost"
+                      >
+                        Add Option
+                      </Button>
+                    </HStack>
+                    <VStack spacing={2} align="stretch">
+                      {(localField.options || []).map((option, index) => (
+                        <HStack key={index}>
+                          <Input
+                            placeholder="Label"
+                            value={option.label}
+                            onChange={(e) => updateOption(index, 'label', e.target.value)}
+                            size="sm"
+                          />
+                          <Input
+                            placeholder="Value"
+                            value={option.value}
+                            onChange={(e) => updateOption(index, 'value', e.target.value)}
+                            size="sm"
+                          />
+                          <IconButton
+                            aria-label="Remove option"
+                            icon={<FiTrash2 />}
+                            size="sm"
+                            colorScheme="red"
+                            variant="ghost"
+                            onClick={() => removeOption(index)}
+                          />
+                        </HStack>
+                      ))}
+                    </VStack>
+                  </Box>
+                )}
+
+                {/* Lookup Configuration */}
+                {localField.dataType === 'lookup' && (
+                  <Box>
+                    <FormLabel>Lookup Configuration</FormLabel>
+                    <VStack spacing={3} align="stretch">
+                      <FormControl>
+                        <FormLabel fontSize="sm">Target Module</FormLabel>
+                        <Select
+                          value={localField.lookupConfig?.targetModule || ''}
+                          onChange={(e) =>
+                            handleChange('lookupConfig', {
+                              ...localField.lookupConfig,
+                              targetModule: e.target.value,
+                            })
+                          }
+                          size="sm"
+                        >
+                          <option value="">Select module...</option>
+                          <option value="Leads">Leads</option>
+                          <option value="Clients">Clients</option>
+                          <option value="Quotations">Quotations</option>
+                          <option value="Orders">Orders</option>
+                          <option value="Invoices">Invoices</option>
+                          <option value="Payments">Payments</option>
+                        </Select>
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel fontSize="sm">Display Field</FormLabel>
+                        <Input
+                          value={localField.lookupConfig?.displayField || ''}
+                          onChange={(e) =>
+                            handleChange('lookupConfig', {
+                              ...localField.lookupConfig,
+                              displayField: e.target.value,
+                            })
+                          }
+                          size="sm"
+                          placeholder="e.g., name"
+                        />
+                      </FormControl>
+                    </VStack>
+                  </Box>
+                )}
+              </VStack>
+            </TabPanel>
+
+            {/* Validation Rules */}
+            <TabPanel>
+              <VStack spacing={4} align="stretch">
+                <HStack>
+                  <Text fontWeight="semibold" flex={1}>
+                    Validation Rules
+                  </Text>
+                  <Button
+                    size="sm"
+                    leftIcon={<FiPlus />}
+                    onClick={addValidation}
+                    colorScheme="blue"
+                  >
+                    Add Rule
+                  </Button>
+                </HStack>
+
+                {(localField.validation || []).map((validation, index) => (
+                  <Box
+                    key={index}
+                    p={3}
+                    border="1px solid"
+                    borderColor={borderColor}
+                    borderRadius="md"
+                  >
+                    <VStack spacing={3} align="stretch">
+                      <HStack>
+                        <FormControl flex={1}>
+                          <FormLabel fontSize="sm">Validation Type</FormLabel>
+                          <Select
+                            value={validation.type}
+                            onChange={(e) => updateValidation(index, 'type', e.target.value)}
+                            size="sm"
+                          >
+                            <option value="required">Required</option>
+                            <option value="minLength">Min Length</option>
+                            <option value="maxLength">Max Length</option>
+                            <option value="pattern">Pattern (Regex)</option>
+                            <option value="email">Email Format</option>
+                            <option value="url">URL Format</option>
+                            <option value="min">Min Value</option>
+                            <option value="max">Max Value</option>
+                          </Select>
+                        </FormControl>
+                        <IconButton
+                          aria-label="Remove validation"
+                          icon={<FiTrash2 />}
+                          size="sm"
+                          colorScheme="red"
+                          variant="ghost"
+                          onClick={() => removeValidation(index)}
+                          mt={6}
+                        />
+                      </HStack>
+
+                      {validation.type !== 'required' &&
+                        validation.type !== 'email' &&
+                        validation.type !== 'url' && (
+                          <FormControl>
+                            <FormLabel fontSize="sm">Value</FormLabel>
+                            <Input
+                              value={validation.value || ''}
+                              onChange={(e) => updateValidation(index, 'value', e.target.value)}
+                              size="sm"
+                              placeholder={
+                                validation.type === 'pattern'
+                                  ? 'e.g., ^[A-Z]{3}$'
+                                  : 'Enter value'
+                              }
+                            />
+                          </FormControl>
+                        )}
+
+                      <FormControl>
+                        <FormLabel fontSize="sm">Error Message</FormLabel>
+                        <Input
+                          value={validation.message || ''}
+                          onChange={(e) => updateValidation(index, 'message', e.target.value)}
+                          size="sm"
+                          placeholder="Custom error message"
+                        />
+                      </FormControl>
+                    </VStack>
+                  </Box>
+                ))}
+
+                {(!localField.validation || localField.validation.length === 0) && (
+                  <Text fontSize="sm" color="gray.500" textAlign="center" py={4}>
+                    No validation rules configured
+                  </Text>
+                )}
+              </VStack>
+            </TabPanel>
+
+            {/* Advanced Settings */}
+            <TabPanel>
+              <VStack spacing={4} align="stretch">
+                <Text fontSize="sm" color="gray.500">
+                  Advanced field configuration options will be available here.
+                </Text>
+                <FormControl>
+                  <FormLabel>Field Group</FormLabel>
+                  <Input placeholder="e.g., Personal Information" size="sm" />
+                </FormControl>
+                <FormControl>
+                  <FormLabel>Display Order</FormLabel>
+                  <Input type="number" placeholder="e.g., 1" size="sm" />
+                </FormControl>
+              </VStack>
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
+      </Box>
+
+      {/* Footer */}
+      <HStack p={4} borderTop="1px solid" borderColor={borderColor} spacing={3}>
+        <Button flex={1} variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button flex={1} colorScheme="blue" onClick={handleSave}>
+          Save Changes
+        </Button>
+      </HStack>
+    </Box>
+  );
+}

@@ -187,10 +187,10 @@ export default function Dashboard() {
             variant="ghost"
             justifyContent="start"
             leftIcon={<Icon as={FiSettings} />}
-            onClick={() => router.push('/admin/fields')}
+            onClick={() => router.push('/admin/field-builder')}
             _hover={{ bg: 'gray.100' }}
           >
-            Field Manager
+            Field Builder
           </Button>
         </Box>
       </VStack>
