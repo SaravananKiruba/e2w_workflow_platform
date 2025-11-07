@@ -316,11 +316,12 @@ export default function FieldBuilderPage() {
   }
 
   return (
-    <Box bg={bgColor} minH="100vh">
-      <Container maxW="container.2xl" py={6}>
-        <VStack spacing={6} align="stretch">
-          {/* Header */}
-          <Box>
+    <AppLayout>
+      <Box bg={bgColor} minH="100vh">
+        <Container maxW="container.2xl" py={6}>
+          <VStack spacing={6} align="stretch">
+            {/* Header */}
+            <Box>
             <Breadcrumb spacing={2} separator={<FiChevronRight />} mb={4}>
               <BreadcrumbItem>
                 <BreadcrumbLink onClick={() => router.push('/dashboard')}>
