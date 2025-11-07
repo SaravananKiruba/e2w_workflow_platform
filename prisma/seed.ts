@@ -179,6 +179,27 @@ async function main() {
 
   console.log('✅ Auto-numbering sequences initialized for demo tenant')
 
+  // Seed module configurations
+  console.log('\n🌱 Seeding module configurations...')
+  
+  // Run module seeders using tsx
+  const { exec } = require('child_process');
+  const { promisify } = require('util');
+  const execAsync = promisify(exec);
+  
+  try {
+    await execAsync('npx tsx prisma/seed-leads.ts');
+    await execAsync('npx tsx prisma/seed-clients.ts');
+    await execAsync('npx tsx prisma/seed-quotations.ts');
+    await execAsync('npx tsx prisma/seed-orders.ts');
+    await execAsync('npx tsx prisma/seed-invoices.ts');
+    await execAsync('npx tsx prisma/seed-payments.ts');
+    await execAsync('npx tsx prisma/seed-analytics.ts');
+    console.log('✅ All module configurations seeded');
+  } catch (error) {
+    console.error('⚠️ Some module configurations failed to seed:', error);
+  }
+
   console.log('🎉 Seeding completed!')
 }
 

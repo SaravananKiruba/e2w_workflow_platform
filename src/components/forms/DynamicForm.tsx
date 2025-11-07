@@ -95,9 +95,26 @@ export const DynamicForm = forwardRef<DynamicFormRef, DynamicFormProps>(
   ]);
 
   const handleFieldChange = (name: string, value: any) => {
+    console.log(`[DynamicForm] 🔄 handleFieldChange CALLED:`, { 
+      fieldName: name,
+      oldValue: formData[name],
+      newValue: value,
+      valueChanged: formData[name] !== value,
+      oldType: typeof formData[name],
+      newType: typeof value
+    });
+    
     const newData = { ...formData, [name]: value };
+    console.log(`[DynamicForm] 📦 Setting new formData state:`, {
+      fieldChanged: name,
+      newFieldValue: value,
+      fullFormData: newData
+    });
+    
     setFormData(newData);
     onChange?.(newData);
+    
+    console.log(`[DynamicForm] ✅ State update dispatched for field: ${name}`);
     
     // Clear error for this field
     if (errors[name]) {
@@ -106,6 +123,14 @@ export const DynamicForm = forwardRef<DynamicFormRef, DynamicFormProps>(
   };
 
   const handleCascadePopulate = (fields: Record<string, any>) => {
+    const changedFields = Object.entries(fields)
+      .filter(([key, val]) => formData[key] !== val)
+      .map(([key]) => key);
+    
+    if (changedFields.length > 0) {
+      console.log(`[DynamicForm] 🔗 Cascade populating ${changedFields.length} fields:`, changedFields.join(', '));
+    }
+    
     const newData = { ...formData, ...fields };
     setFormData(newData);
     onChange?.(newData);
@@ -170,16 +195,19 @@ export const DynamicForm = forwardRef<DynamicFormRef, DynamicFormProps>(
     if (!layout || layout.type === 'single_column') {
       return (
         <VStack spacing={4} align="stretch">
-          {config.fields.map(field => (
-            <DynamicField
-              key={field.name}
-              field={field}
-              value={formData[field.name]}
-              onChange={handleFieldChange}
-              onCascadePopulate={handleCascadePopulate}
-              error={errors[field.name]}
-            />
-          ))}
+          {config.fields.map(field => {
+            const fieldValue = formData[field.name];
+            return (
+              <DynamicField
+                key={field.name}
+                field={field}
+                value={fieldValue}
+                onChange={handleFieldChange}
+                onCascadePopulate={handleCascadePopulate}
+                error={errors[field.name]}
+              />
+            );
+          })}
         </VStack>
       );
     }

@@ -45,6 +45,18 @@ async function seedQuotationsModule() {
         isRequired: true,
         placeholder: 'Select a client',
         helpText: 'Link to existing client record',
+        config: {
+          targetModule: 'Clients',
+          displayField: 'clientName',
+          searchFields: ['clientName', 'email', 'phone'],
+          cascadeFields: {
+            clientName: 'clientName',
+            email: 'clientEmail',
+            phone: 'clientPhone',
+            billingAddress: 'clientAddress',
+            gstin: 'clientGSTIN',
+          },
+        },
       },
       {
         name: 'clientName',
@@ -350,7 +362,13 @@ async function seedQuotationsModule() {
         version: 1,
       },
     },
-    update: {},
+    update: {
+      fields: JSON.stringify(quotationsConfig.fields),
+      displayName: 'Quotations',
+      icon: '📋',
+      description: 'Create and manage quotations for clients',
+      status: 'active',
+    },
     create: {
       tenantId: demoTenant.id,
       moduleName: 'Quotations',
