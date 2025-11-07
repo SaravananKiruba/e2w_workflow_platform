@@ -6,6 +6,7 @@ import {
   Container,
   Heading,
   HStack,
+  IconButton,
   Table,
   TableContainer,
   Tbody,
@@ -32,19 +33,20 @@ import {
   Badge,
   useColorModeValue,
 } from '@chakra-ui/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { DynamicForm } from '@/components/forms/DynamicForm';
+import { DynamicForm, DynamicFormRef } from '@/components/forms/DynamicForm';
 import { ModuleConfig, FieldDefinition } from '@/types/metadata';
 import AppLayout from '@/components/layout/AppLayout';
 
 interface ModuleRecord {
   id: string;
-  data: Record<string, any>;
+  data?: Record<string, any>; // Optional: nested structure (from API POST/PUT response)
   createdAt: string;
   updatedAt: string;
   status: string;
+  [key: string]: any; // Allow dynamic fields (from GET response where data is spread)
 }
 
 /**
@@ -71,6 +73,7 @@ export default function ModulePage() {
   const params = useParams();
   const { data: session } = useSession();
   const toast = useToast();
+  const formRef = useRef<DynamicFormRef>(null);
 
   const moduleName = params.moduleName as string;
   const tenantId = session?.user?.tenantId;
@@ -149,7 +152,7 @@ export default function ModulePage() {
       }
 
       const data = await response.json();
-      setRecords(data);
+      setRecords(data.records || []);
     } catch (error) {
       console.error('Error loading records:', error);
       toast({
@@ -389,6 +392,16 @@ export default function ModulePage() {
     }
   };
 
+  // Helper function to get field value from record (handles both flat and nested data structure)
+  const getFieldValue = (record: ModuleRecord, fieldName: string) => {
+    // Check if data is nested (for newly created records)
+    if (record.data && typeof record.data === 'object' && !Array.isArray(record.data)) {
+      return record.data[fieldName];
+    }
+    // Otherwise, data is spread at root level (for fetched records)
+    return (record as any)[fieldName];
+  };
+
   if (loading || !moduleConfig) {
     return (
       <Container maxW="full" centerContent py={10}>
@@ -407,20 +420,20 @@ export default function ModulePage() {
 
   return (
     <AppLayout>
-      <Container maxW="full" py={6}>
+      <Container maxW="full" py={6} px={{ base: 4, md: 6 }}>
       <VStack align="stretch" spacing={6}>
         {/* Header */}
-        <HStack justify="space-between" align="center">
+        <HStack justify="space-between" align="center" flexWrap="wrap" gap={3}>
           <VStack align="start" spacing={1}>
-            <Heading size="lg">{moduleConfig.displayName}</Heading>
-            <Text color="gray.600" fontSize="sm">
+            <Heading size={{ base: 'md', md: 'lg' }}>{moduleConfig.displayName}</Heading>
+            <Text color="gray.600" fontSize={{ base: 'xs', md: 'sm' }}>
               {moduleConfig.description || `Manage ${moduleConfig.displayName}`}
             </Text>
           </VStack>
-          <HStack spacing={3}>
+          <HStack spacing={3} flexWrap="wrap">
             <Button
               variant="outline"
-              size="sm"
+              size={{ base: 'sm', md: 'md' }}
               onClick={async () => {
                 setLoading(true);
                 await loadModuleConfig();
@@ -433,47 +446,53 @@ export default function ModulePage() {
                 });
               }}
             >
-              🔄 Reload Config
+              🔄 <Text display={{ base: 'none', md: 'inline' }} ml={2}>Reload Config</Text>
             </Button>
-            <Button colorScheme="blue" onClick={handleCreateNew}>
-              ➕ New {moduleConfig.displayName}
+            <Button 
+              colorScheme="primary" 
+              onClick={handleCreateNew}
+              size={{ base: 'sm', md: 'md' }}
+            >
+              ➕ New
             </Button>
           </HStack>
         </HStack>
 
-        {/* Records Table */}
+        {/* Records - Responsive View */}
         {records.length > 0 ? (
-          <TableContainer borderWidth={1} borderRadius="md">
-            <Table variant="simple" size="sm">
-              <Thead bg="gray.50">
-                <Tr>
-                  {displayFields.map((field) => (
-                    <Th key={field.name}>{field.label}</Th>
-                  ))}
-                  <Th>Created</Th>
-                  <Th>Actions</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {records.map((record) => (
-                  <Tr key={record.id} _hover={{ bg: 'gray.50' }}>
+          <>
+            {/* Desktop Table */}
+            <TableContainer borderWidth={1} borderRadius="md" display={{ base: 'none', md: 'block' }}>
+              <Table variant="simple" size="sm">
+                <Thead bg="gray.50">
+                  <Tr>
                     {displayFields.map((field) => (
-                      <Td key={`${record.id}-${field.name}`}>
-                        {getDisplayValue(field, record.data[field.name])}
-                      </Td>
+                      <Th key={field.name}>{field.label}</Th>
                     ))}
-                    <Td fontSize="sm">
-                      {new Date(record.createdAt).toLocaleDateString('en-IN')}
-                    </Td>
-                    <Td>
-                      <HStack spacing={2}>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          colorScheme="blue"
-                          onClick={() => handleView(record)}
-                        >
-                          👁️
+                    <Th>Created</Th>
+                    <Th>Actions</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {records.map((record) => (
+                    <Tr key={record.id} _hover={{ bg: 'gray.50' }}>
+                      {displayFields.map((field) => (
+                        <Td key={`${record.id}-${field.name}`}>
+                          {getDisplayValue(field, getFieldValue(record, field.name))}
+                        </Td>
+                      ))}
+                      <Td fontSize="sm">
+                        {new Date(record.createdAt).toLocaleDateString('en-IN')}
+                      </Td>
+                      <Td>
+                        <HStack spacing={2}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            colorScheme="primary"
+                            onClick={() => handleView(record)}
+                          >
+                            👁️
                         </Button>
                         <Button
                           size="sm"
@@ -483,7 +502,7 @@ export default function ModulePage() {
                         >
                           ✏️
                         </Button>
-                        {moduleName === 'Leads' && record.data.status !== 'Converted' && (
+                        {moduleName === 'Leads' && getFieldValue(record, 'status') !== 'Converted' && (
                           <Button
                             size="sm"
                             variant="ghost"
@@ -495,7 +514,7 @@ export default function ModulePage() {
                             ↩️
                           </Button>
                         )}
-                        {moduleName === 'Quotations' && record.data.status !== 'Converted' && (
+                        {moduleName === 'Quotations' && getFieldValue(record, 'status') !== 'Converted' && (
                           <Button
                             size="sm"
                             variant="ghost"
@@ -507,7 +526,7 @@ export default function ModulePage() {
                             📋
                           </Button>
                         )}
-                        {moduleName === 'Orders' && record.data.status !== 'Invoiced' && (
+                        {moduleName === 'Orders' && getFieldValue(record, 'status') !== 'Invoiced' && (
                           <Button
                             size="sm"
                             variant="ghost"
@@ -534,6 +553,73 @@ export default function ModulePage() {
               </Tbody>
             </Table>
           </TableContainer>
+
+            {/* Mobile Card View */}
+            <VStack spacing={3} display={{ base: 'flex', md: 'none' }} align="stretch">
+              {records.map((record) => (
+                <Box
+                  key={record.id}
+                  borderWidth={1}
+                  borderRadius="lg"
+                  p={4}
+                  bg="white"
+                  shadow="sm"
+                >
+                  <VStack align="stretch" spacing={3}>
+                    {/* Primary Fields */}
+                    {displayFields.map((field) => (
+                      <Box key={`${record.id}-${field.name}`}>
+                        <Text fontSize="xs" color="gray.500" fontWeight="medium">
+                          {field.label}
+                        </Text>
+                        <Text fontSize="sm" mt={1}>
+                          {getDisplayValue(field, getFieldValue(record, field.name))}
+                        </Text>
+                      </Box>
+                    ))}
+                    
+                    {/* Metadata */}
+                    <Box pt={2} borderTop="1px" borderColor="gray.200">
+                      <Text fontSize="xs" color="gray.500">
+                        Created: {new Date(record.createdAt).toLocaleDateString('en-IN')}
+                      </Text>
+                    </Box>
+
+                    {/* Actions */}
+                    <HStack spacing={2} pt={2} flexWrap="wrap">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        colorScheme="primary"
+                        onClick={() => handleView(record)}
+                        flex={1}
+                        minW="80px"
+                      >
+                        👁️ View
+                      </Button>
+                      <Button
+                        size="sm"
+                        colorScheme="primary"
+                        onClick={() => handleEdit(record)}
+                        flex={1}
+                        minW="80px"
+                      >
+                        ✏️ Edit
+                      </Button>
+                      <IconButton
+                        aria-label="Delete"
+                        icon={<Text>🗑️</Text>}
+                        size="sm"
+                        variant="outline"
+                        colorScheme="red"
+                        onClick={() => handleDelete(record.id)}
+                      />
+                    </HStack>
+                  </VStack>
+                </Box>
+              ))}
+            </VStack>
+          </>
         ) : (
           <Box
             p={8}
@@ -562,8 +648,9 @@ export default function ModulePage() {
           </ModalHeader>
           <ModalBody>
             <DynamicForm
+              ref={formRef}
               config={moduleConfig}
-              initialData={selectedRecord?.data || {}}
+              initialData={selectedRecord ? (selectedRecord.data && typeof selectedRecord.data === 'object' && !Array.isArray(selectedRecord.data) ? selectedRecord.data : selectedRecord) : {}}
               onSubmit={handleFormSubmit}
             />
           </ModalBody>
@@ -573,14 +660,11 @@ export default function ModulePage() {
                 Cancel
               </Button>
               <Button
-                colorScheme="blue"
+                colorScheme="primary"
                 isLoading={isSubmitting}
                 onClick={() => {
                   // Trigger form submission via ref
-                  const formSubmitBtn = document.querySelector(
-                    'form button[type="submit"]'
-                  ) as HTMLButtonElement;
-                  formSubmitBtn?.click();
+                  formRef.current?.submit();
                 }}
               >
                 {selectedRecord ? 'Update' : 'Create'}
@@ -599,7 +683,7 @@ export default function ModulePage() {
             {selectedRecord && (
               <VStack align="stretch" spacing={4}>
                 {moduleConfig.fields.map((field) => {
-                  const value = selectedRecord.data[field.name];
+                  const value = getFieldValue(selectedRecord, field.name);
                   return (
                     <Box key={field.name}>
                       <Text fontWeight="bold" fontSize="sm" color="gray.600">

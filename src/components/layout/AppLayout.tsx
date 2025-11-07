@@ -64,12 +64,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
 
+  const role = session?.user?.role;
+  const isPlatformAdmin = role === 'platform_admin';
+  const isTenantAdmin = role === 'admin';
+
   // Define navigation items based on user role
   const getNavItems = (): NavItem[] => {
-    const role = session?.user?.role;
-
     // Platform Admin Navigation
-    if (role === 'platform_admin') {
+    if (isPlatformAdmin) {
       return [
         { name: 'Platform Dashboard', icon: FiGrid, href: '/platform-admin/dashboard' },
         { name: 'All Tenants', icon: FiDatabase, href: '/platform-admin/tenants' },
@@ -79,7 +81,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     }
 
     // Tenant Admin Navigation
-    if (role === 'admin') {
+    if (isTenantAdmin) {
       return [
         { name: 'Dashboard', icon: FiHome, href: '/dashboard' },
         { name: 'Field Builder', icon: FiLayers, href: '/admin/field-builder' },
@@ -109,33 +111,64 @@ export default function AppLayout({ children }: AppLayoutProps) {
     await signOut({ redirect: true, callbackUrl: '/auth/signin' });
   };
 
+  // Color schemes based on role
+  const sidebarBg = useColorModeValue(
+    isPlatformAdmin ? 'gray.800' : 'white',
+    'gray.900'
+  );
+  const sidebarBorderColor = useColorModeValue(
+    isPlatformAdmin ? 'gray.700' : 'gray.200',
+    'gray.700'
+  );
+  const logoColor = isPlatformAdmin ? 'accent.200' : 'primary.600';
+  const roleColors = {
+    platform_admin: 'orange',
+    admin: 'primary',
+    user: 'gray',
+  };
+
   const SidebarContent = () => (
     <VStack
       h="full"
       w="240px"
-      bg={useColorModeValue('white', 'gray.900')}
+      bg={sidebarBg}
       borderRight="1px"
-      borderColor={useColorModeValue('gray.200', 'gray.700')}
+      borderColor={sidebarBorderColor}
       align="stretch"
       spacing={0}
     >
-      {/* Logo Section */}
-      <Box p={6} borderBottom="1px" borderColor={useColorModeValue('gray.200', 'gray.700')}>
+      {/* Logo Section with Role Indicator */}
+      <Box 
+        p={6} 
+        borderBottom="1px" 
+        borderColor={sidebarBorderColor}
+        bg={isPlatformAdmin ? 'gray.900' : undefined}
+      >
         <HStack spacing={2}>
           <Box fontSize="2xl">💼</Box>
           <VStack align="start" spacing={0}>
-            <Text fontSize="lg" fontWeight="bold" color="blue.600">
+            <Text fontSize="lg" fontWeight="bold" color={logoColor}>
               Easy2Work
             </Text>
-            <Text fontSize="xs" color="gray.500">
-              Workflow Platform
-            </Text>
+            <Badge 
+              colorScheme={isPlatformAdmin ? 'orange' : isTenantAdmin ? 'green' : 'blue'} 
+              fontSize="xs"
+              variant={isPlatformAdmin ? 'solid' : 'subtle'}
+            >
+              {isPlatformAdmin ? 'Platform' : isTenantAdmin ? 'Admin' : 'User'}
+            </Badge>
           </VStack>
         </HStack>
       </Box>
 
       {/* Navigation Links */}
-      <VStack flex={1} align="stretch" spacing={1} p={3} overflowY="auto">
+      <VStack 
+        flex={1} 
+        align="stretch" 
+        spacing={1} 
+        p={3} 
+        overflowY="auto"
+      >
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -143,12 +176,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <Button
                 onClick={() => router.push(item.href)}
                 variant={isActive ? 'solid' : 'ghost'}
-                colorScheme={isActive ? 'blue' : 'gray'}
+                colorScheme={
+                  isPlatformAdmin ? (isActive ? 'orange' : 'gray') : 
+                  isActive ? 'primary' : 'gray'
+                }
                 justifyContent="flex-start"
                 leftIcon={<Icon as={item.icon} />}
                 size="md"
                 fontWeight={isActive ? 'bold' : 'normal'}
                 position="relative"
+                color={isPlatformAdmin && !isActive ? 'gray.300' : undefined}
+                _hover={{
+                  bg: isPlatformAdmin ? 'gray.700' : 'primary.50',
+                }}
               >
                 <Text flex={1} textAlign="left" isTruncated>
                   {item.name}
@@ -165,7 +205,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </VStack>
 
       {/* User Profile Section */}
-      <Box p={3} borderTop="1px" borderColor={useColorModeValue('gray.200', 'gray.700')}>
+      <Box 
+        p={3} 
+        borderTop="1px" 
+        borderColor={sidebarBorderColor}
+        bg={isPlatformAdmin ? 'gray.900' : undefined}
+      >
         <Menu>
           <MenuButton
             as={Button}
@@ -173,22 +218,42 @@ export default function AppLayout({ children }: AppLayoutProps) {
             w="full"
             h="auto"
             p={2}
-            _hover={{ bg: useColorModeValue('gray.100', 'gray.700') }}
+            _hover={{ bg: isPlatformAdmin ? 'gray.700' : 'gray.100' }}
           >
             <HStack spacing={3}>
               <Avatar 
                 size="sm" 
                 name={session?.user?.name || undefined} 
-                src={session?.user?.image ?? undefined} 
+                src={session?.user?.image ?? undefined}
+                bg={isPlatformAdmin ? 'orange.500' : isTenantAdmin ? 'primary.500' : 'blue.500'}
               />
               <VStack align="start" spacing={0} flex={1}>
-                <Text fontSize="sm" fontWeight="medium" isTruncated maxW="140px">
+                <Text 
+                  fontSize="sm" 
+                  fontWeight="medium" 
+                  isTruncated 
+                  maxW="140px"
+                  color={isPlatformAdmin ? 'white' : undefined}
+                >
                   {session?.user?.name}
                 </Text>
-                <Badge colorScheme="purple" fontSize="xs">
-                  {session?.user?.role === 'platform_admin' ? 'Platform Admin' : 
-                   session?.user?.role === 'admin' ? 'Tenant Admin' : 'User'}
-                </Badge>
+                <Tooltip 
+                  label={
+                    isPlatformAdmin ? 'Manages entire platform and all tenants' : 
+                    isTenantAdmin ? 'Manages tenant configuration and users' : 
+                    'Regular user with module access'
+                  }
+                  placement="top"
+                >
+                  <Badge 
+                    colorScheme={roleColors[role as keyof typeof roleColors] || 'gray'} 
+                    fontSize="xs"
+                    variant={isPlatformAdmin ? 'solid' : 'subtle'}
+                  >
+                    {isPlatformAdmin ? 'Platform Admin' : 
+                     isTenantAdmin ? 'Tenant Admin' : 'User'}
+                  </Badge>
+                </Tooltip>
               </VStack>
             </HStack>
           </MenuButton>
@@ -228,7 +293,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           p={4}
           borderBottom="1px"
           borderColor={useColorModeValue('gray.200', 'gray.700')}
-          bg={useColorModeValue('white', 'gray.900')}
+          bg={isPlatformAdmin ? 'gray.800' : useColorModeValue('white', 'gray.900')}
           alignItems="center"
           justifyContent="space-between"
         >
@@ -237,11 +302,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
             icon={<FiMenu />}
             onClick={onOpen}
             variant="ghost"
+            color={isPlatformAdmin ? 'white' : undefined}
           />
           <HStack spacing={2}>
-            <Text fontSize="lg" fontWeight="bold" color="blue.600">
+            <Text fontSize="lg" fontWeight="bold" color={logoColor}>
               Easy2Work
             </Text>
+            <Badge 
+              colorScheme={isPlatformAdmin ? 'orange' : isTenantAdmin ? 'green' : 'blue'} 
+              fontSize="xs"
+            >
+              {isPlatformAdmin ? 'Platform' : isTenantAdmin ? 'Admin' : 'User'}
+            </Badge>
           </HStack>
           <Box w="40px" /> {/* Spacer for alignment */}
         </Box>

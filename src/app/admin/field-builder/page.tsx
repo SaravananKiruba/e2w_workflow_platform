@@ -55,7 +55,20 @@ interface FieldDefinition {
   hidden?: boolean;
   defaultValue?: any;
   validation?: any[];
-  options?: any[];
+  config?: {
+    maxLength?: number;
+    minLength?: number;
+    min?: number;
+    max?: number;
+    options?: any[];
+    targetModule?: string;
+    displayField?: string;
+    searchFields?: string[];
+    cascadeFields?: Record<string, string>;
+    columns?: any[];
+    [key: string]: any;
+  };
+  options?: any[]; // Deprecated - keep for backward compatibility
   lookupConfig?: any;
   tableConfig?: any;
 }
@@ -177,19 +190,46 @@ export default function FieldBuilderPage() {
   }
 
   function addNewField(fieldType: any) {
+    // Map dataType to appropriate uiType
+    const uiTypeMap: Record<string, string> = {
+      text: 'textbox',
+      textarea: 'textarea',
+      number: 'number',
+      currency: 'currency',
+      date: 'date',
+      datetime: 'datetime',
+      email: 'email',
+      phone: 'phone',
+      url: 'url',
+      dropdown: 'dropdown',
+      multiselect: 'multiselect',
+      checkbox: 'checkbox',
+      radio: 'radio',
+      file: 'file',
+      formula: 'formula',
+      lookup: 'lookup',
+      table: 'table',
+    };
+
     const newField: FieldDefinition = {
       id: `field-${Date.now()}`,
       name: `${fieldType.name}_${Date.now()}`,
       label: `New ${fieldType.label}`,
       dataType: fieldType.name,
-      uiType: fieldType.name === 'lookup' ? 'autocomplete' : 'input',
+      uiType: uiTypeMap[fieldType.name] || 'textbox',
       placeholder: '',
       helpText: '',
       required: false,
       readOnly: false,
       hidden: false,
       validation: [],
-      ...(fieldType.config?.defaultProps || {}),
+      config: {
+        ...(fieldType.config?.defaultProps || {}),
+        // Initialize empty options array for selection fields
+        ...((['dropdown', 'select', 'multiselect', 'radio'].includes(fieldType.name)) && {
+          options: []
+        }),
+      },
     };
 
     setFields([...fields, newField]);
