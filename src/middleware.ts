@@ -19,6 +19,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(signInUrl);
   }
 
+  // Platform Admin route guard - only platform_admin role can access
+  if (request.nextUrl.pathname.startsWith('/platform-admin')) {
+    if (token.role !== 'platform_admin') {
+      return NextResponse.redirect(new URL('/unauthorized', request.url));
+    }
+  }
+
+  // Admin route guard - admin, manager, and platform_admin can access
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    if (!['admin', 'manager', 'platform_admin'].includes(token.role as string)) {
+      return NextResponse.redirect(new URL('/unauthorized', request.url));
+    }
+  }
+
   // Add tenant context to headers for API routes
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-tenant-id', token.tenantId as string);

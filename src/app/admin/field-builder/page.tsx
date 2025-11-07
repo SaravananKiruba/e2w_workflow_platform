@@ -36,6 +36,7 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { FiSave, FiEye, FiRotateCcw, FiChevronRight } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import AppLayout from '@/components/layout/AppLayout';
 import FieldLibrary from '@/components/admin/FieldLibrary';
 import FormCanvas from '@/components/admin/FormCanvas';
 import FieldPropertyPanel from '@/components/admin/FieldPropertyPanel';
@@ -452,5 +453,6 @@ export default function FieldBuilderPage() {
         </ModalContent>
       </Modal>
     </Box>
+    </AppLayout>
   );
 }

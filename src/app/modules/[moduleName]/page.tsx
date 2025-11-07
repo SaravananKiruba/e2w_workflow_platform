@@ -98,19 +98,36 @@ export default function ModulePage() {
   }, [moduleName, tenantId]);
 
   const loadModuleConfig = async () => {
+    console.log('[CONFIG SYNC] Loading config for:', moduleName);
+    console.log('[CONFIG SYNC] Tenant ID:', tenantId);
+    
     try {
-      const response = await fetch(
-        `/api/modules?tenantId=${tenantId}&moduleName=${moduleName}`
-      );
+      const url = `/api/modules?tenantId=${tenantId}&moduleName=${moduleName}`;
+      console.log('[CONFIG SYNC] Fetching from:', url);
+      
+      const response = await fetch(url, {
+        // Disable cache to ensure fresh data
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+        },
+      });
+
+      console.log('[CONFIG SYNC] Response status:', response.status);
 
       if (!response.ok) {
         throw new Error('Failed to load module configuration');
       }
 
       const config = await response.json();
+      console.log('[CONFIG SYNC] Loaded config:', config);
+      console.log('[CONFIG SYNC] Number of fields:', config.fields?.length || 0);
+      console.log('[CONFIG SYNC] Field names:', config.fields?.map((f: any) => f.name).join(', '));
+      
       setModuleConfig(config);
     } catch (error) {
-      console.error('Error loading module config:', error);
+      console.error('[CONFIG SYNC] Error loading module config:', error);
       toast({
         title: 'Error',
         description: 'Failed to load module configuration',
@@ -400,9 +417,28 @@ export default function ModulePage() {
               {moduleConfig.description || `Manage ${moduleConfig.displayName}`}
             </Text>
           </VStack>
-          <Button colorScheme="blue" onClick={handleCreateNew}>
-            ➕ New {moduleConfig.displayName}
-          </Button>
+          <HStack spacing={3}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                setLoading(true);
+                await loadModuleConfig();
+                setLoading(false);
+                toast({
+                  title: 'Configuration Reloaded',
+                  description: 'Module configuration has been refreshed',
+                  status: 'success',
+                  duration: 2000,
+                });
+              }}
+            >
+              🔄 Reload Config
+            </Button>
+            <Button colorScheme="blue" onClick={handleCreateNew}>
+              ➕ New {moduleConfig.displayName}
+            </Button>
+          </HStack>
         </HStack>
 
         {/* Records Table */}
