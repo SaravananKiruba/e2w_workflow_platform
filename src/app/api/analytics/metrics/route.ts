@@ -25,6 +25,10 @@ export async function GET(req: NextRequest) {
         result = await AnalyticsEngine.getDashboardMetrics(context.tenantId);
         break;
 
+      case 'finance-dashboard':
+        result = await AnalyticsEngine.getFinanceDashboardMetrics(context.tenantId);
+        break;
+
       case 'revenue':
         result = {
           metric: 'Total Revenue',

@@ -103,9 +103,20 @@ export class ConversionService {
         items: quotationData.items || [], // Copy line items
         subtotal: quotationData.subtotal,
         discount: quotationData.discount || 0,
+        discountAmount: quotationData.discountAmount || 0,
+        
+        // GST Fields
         gstPercentage: quotationData.gstPercentage || 0,
-        gstAmount: quotationData.gstAmount || 0,
-        total: quotationData.total || quotationData.finalTotal,
+        gstType: quotationData.gstType,
+        cgstPercentage: quotationData.cgstPercentage || 0,
+        sgstPercentage: quotationData.sgstPercentage || 0,
+        igstPercentage: quotationData.igstPercentage || 0,
+        cgstAmount: quotationData.cgstAmount || 0,
+        sgstAmount: quotationData.sgstAmount || 0,
+        igstAmount: quotationData.igstAmount || 0,
+        totalGSTAmount: quotationData.totalGSTAmount || 0,
+        
+        total: quotationData.totalAmount || quotationData.total,
         status: 'pending',
         notes: quotationData.notes,
       };
@@ -187,9 +198,20 @@ export class ConversionService {
         items: orderData.items || [], // Copy line items
         subtotal: orderData.subtotal,
         discount: orderData.discount || 0,
+        discountAmount: orderData.discountAmount || 0,
+        
+        // GST Fields
         gstPercentage: orderData.gstPercentage || 0,
-        gstAmount: orderData.gstAmount || 0,
-        total: orderData.total,
+        gstType: orderData.gstType,
+        cgstPercentage: orderData.cgstPercentage || 0,
+        sgstPercentage: orderData.sgstPercentage || 0,
+        igstPercentage: orderData.igstPercentage || 0,
+        cgstAmount: orderData.cgstAmount || 0,
+        sgstAmount: orderData.sgstAmount || 0,
+        igstAmount: orderData.igstAmount || 0,
+        totalGSTAmount: orderData.totalGSTAmount || 0,
+        
+        total: orderData.totalAmount || orderData.total,
         status: 'pending_payment',
         invoiceDate: new Date().toISOString().split('T')[0],
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)

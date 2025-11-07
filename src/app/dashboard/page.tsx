@@ -35,6 +35,14 @@ export const dynamic = 'force-dynamic';
 // Module configuration
 const modules = [
   {
+    name: 'Finance Dashboard',
+    icon: '📊',
+    description: 'Business intelligence & KPIs',
+    color: 'cyan',
+    path: '/dashboard/finance',
+    isSpecial: true,
+  },
+  {
     name: 'Leads',
     icon: '📋',
     description: 'Manage potential customers',
@@ -103,8 +111,13 @@ export default function Dashboard() {
     try {
       const statsData: ModuleStats = {};
       
-      // Load record counts for each module
+      // Load record counts for each module (skip special modules like Finance Dashboard)
       for (const module of modules) {
+        if (module.isSpecial) {
+          statsData[module.name] = 0; // Special modules don't have record counts
+          continue;
+        }
+        
         try {
           const response = await fetch(
             `/api/modules/${module.name}/records?tenantId=${session.user.tenantId}`
@@ -174,10 +187,10 @@ export default function Dashboard() {
             variant="ghost"
             justifyContent="start"
             leftIcon={<Icon as={FiSettings} />}
-            onClick={() => router.push('/admin/fields')}
+            onClick={() => router.push('/admin/field-builder')}
             _hover={{ bg: 'gray.100' }}
           >
-            Field Manager
+            Field Builder
           </Button>
         </Box>
       </VStack>
@@ -302,10 +315,12 @@ export default function Dashboard() {
                   <VStack spacing={3}>
                     <Text fontSize="3xl">{module.icon}</Text>
                     <VStack spacing={0}>
-                      <Text fontSize="2xl" fontWeight="bold" color={`${module.color}.600`}>
-                        {stats[module.name] || 0}
-                      </Text>
-                      <Text fontSize="sm" fontWeight="500" color="gray.600">
+                      {!module.isSpecial && (
+                        <Text fontSize="2xl" fontWeight="bold" color={`${module.color}.600`}>
+                          {stats[module.name] || 0}
+                        </Text>
+                      )}
+                      <Text fontSize="sm" fontWeight="500" color="gray.600" textAlign="center">
                         {module.name}
                       </Text>
                     </VStack>
