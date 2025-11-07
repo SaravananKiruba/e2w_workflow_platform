@@ -80,10 +80,10 @@ export default function SignIn() {
               color="gray.700"
               fontWeight="600"
             >
-              CRM Platform
+              Workflow Automation Platform
             </Heading>
             <Text color="gray.600" fontSize="sm">
-              Manage your entire sales pipeline in one place
+              Automate your entire business workflow without code
             </Text>
           </VStack>
 

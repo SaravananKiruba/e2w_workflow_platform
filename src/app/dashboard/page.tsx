@@ -152,7 +152,7 @@ export default function Dashboard() {
           💼 Easy2Work
         </Text>
         <Text fontSize="xs" color="gray.500" mt={1}>
-          CRM Platform
+          Workflow Platform
         </Text>
       </Box>
 

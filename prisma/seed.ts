@@ -132,6 +132,24 @@ async function main() {
 
   console.log('✅ Demo user created:', demoUser.email)
 
+  // Create platform admin user
+  const platformAdminPassword = await bcrypt.hash('Platform@123', 10)
+  const platformAdmin = await prisma.user.upsert({
+    where: { email: 'platform@easy2work.com' },
+    update: {},
+    create: {
+      email: 'platform@easy2work.com',
+      name: 'Platform Administrator',
+      password: platformAdminPassword,
+      tenantId: demoTenant.id, // Link to demo tenant for now
+      branchId: demoBranch.id,
+      role: 'platform_admin',
+      status: 'active',
+    },
+  })
+
+  console.log('✅ Platform admin created:', platformAdmin.email)
+
   // Initialize auto-numbering sequences for demo tenant
   const autoNumberModules = [
     { moduleName: 'Quotations', prefix: 'QT', format: '{prefix}-{padded:5}' },

@@ -119,11 +119,19 @@ export async function PUT(req: NextRequest) {
       },
     });
 
+    console.log('[CONFIG SYNC] Fields updated successfully for module:', moduleName);
+    console.log('[CONFIG SYNC] New version:', newVersion);
+    console.log('[CONFIG SYNC] Fields count:', fields.length);
+
     return NextResponse.json({
       message: 'Fields updated successfully',
       moduleName,
       version: newVersion,
       fields,
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+      },
     });
   } catch (error) {
     console.error('Error updating fields:', error);

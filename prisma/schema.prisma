@@ -73,7 +73,7 @@ model User {
   password      String?   // Hashed - optional for OAuth users
   image         String?
   
-  role          String    @default("staff") // admin, manager, staff
+  role          String    @default("staff") // platform_admin, admin, manager, staff
   permissions   String?   // JSON: Field-level, module-level permissions
   
   status        String    @default("active")
