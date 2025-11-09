@@ -22,6 +22,12 @@ model Tenant {
   status        String   @default("active") // active, suspended, inactive
   subscriptionTier String @default("free") // free, basic, professional, enterprise
   
+  // Storage and Usage Tracking
+  storageUsedMB Float    @default(0)      // Storage consumed in MB
+  recordCount   Int      @default(0)      // Total records across all modules
+  maxUsers      Int      @default(10)     // Maximum users allowed
+  maxStorage    Float    @default(1000)   // Maximum storage in MB (1GB default)
+  
   // Metadata (stored as JSON strings for SQLite)
   settings      String?  // Tenant-specific settings (JSON)
   branding      String?  // Logo, colors, theme (JSON)

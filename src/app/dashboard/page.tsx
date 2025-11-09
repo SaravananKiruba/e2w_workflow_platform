@@ -28,7 +28,7 @@ import {
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { FiMenu, FiLogOut, FiSettings } from 'react-icons/fi';
+import { FiMenu, FiLogOut } from 'react-icons/fi';
 
 export const dynamic = 'force-dynamic';
 
@@ -178,21 +178,6 @@ export default function Dashboard() {
             {module.name}
           </Button>
         ))}
-
-        <Box pt={4}>
-          <Text fontSize="xs" fontWeight="bold" color="gray.500" px={3} mb={2}>
-            SETTINGS
-          </Text>
-          <Button
-            variant="ghost"
-            justifyContent="start"
-            leftIcon={<Icon as={FiSettings} />}
-            onClick={() => router.push('/admin/field-builder')}
-            _hover={{ bg: 'gray.100' }}
-          >
-            Field Builder
-          </Button>
-        </Box>
       </VStack>
 
       {/* User Menu at Bottom */}

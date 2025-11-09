@@ -430,32 +430,13 @@ export default function ModulePage() {
               {moduleConfig.description || `Manage ${moduleConfig.displayName}`}
             </Text>
           </VStack>
-          <HStack spacing={3} flexWrap="wrap">
-            <Button
-              variant="outline"
-              size={{ base: 'sm', md: 'md' }}
-              onClick={async () => {
-                setLoading(true);
-                await loadModuleConfig();
-                setLoading(false);
-                toast({
-                  title: 'Configuration Reloaded',
-                  description: 'Module configuration has been refreshed',
-                  status: 'success',
-                  duration: 2000,
-                });
-              }}
-            >
-              🔄 <Text display={{ base: 'none', md: 'inline' }} ml={2}>Reload Config</Text>
-            </Button>
-            <Button 
-              colorScheme="primary" 
-              onClick={handleCreateNew}
-              size={{ base: 'sm', md: 'md' }}
-            >
-              ➕ New
-            </Button>
-          </HStack>
+          <Button 
+            colorScheme="primary" 
+            onClick={handleCreateNew}
+            size={{ base: 'sm', md: 'md' }}
+          >
+            ➕ New
+          </Button>
         </HStack>
 
         {/* Records - Responsive View */}
