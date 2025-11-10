@@ -28,7 +28,7 @@ import {
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { FiMenu, FiLogOut, FiSettings } from 'react-icons/fi';
+import { FiMenu, FiLogOut } from 'react-icons/fi';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,6 +96,27 @@ export default function Dashboard() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [stats, setStats] = useState<ModuleStats>({});
   const [loading, setLoading] = useState(true);
+
+  // Role-based redirect
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      const role = session.user.role;
+      
+      // Platform Admin -> Tenant Management (not business dashboard)
+      if (role === 'platform_admin') {
+        router.push('/platform-admin/tenants');
+        return;
+      }
+      
+      // Tenant Admin -> Configuration Management (not business dashboard)
+      if (role === 'admin') {
+        router.push('/tenant-admin');
+        return;
+      }
+      
+      // Manager, Owner, Staff can see business dashboard - continue loading
+    }
+  }, [status, session, router]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -178,21 +199,6 @@ export default function Dashboard() {
             {module.name}
           </Button>
         ))}
-
-        <Box pt={4}>
-          <Text fontSize="xs" fontWeight="bold" color="gray.500" px={3} mb={2}>
-            SETTINGS
-          </Text>
-          <Button
-            variant="ghost"
-            justifyContent="start"
-            leftIcon={<Icon as={FiSettings} />}
-            onClick={() => router.push('/admin/field-builder')}
-            _hover={{ bg: 'gray.100' }}
-          >
-            Field Builder
-          </Button>
-        </Box>
       </VStack>
 
       {/* User Menu at Bottom */}

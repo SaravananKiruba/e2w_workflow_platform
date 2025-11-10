@@ -67,45 +67,36 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const role = session?.user?.role;
   const isPlatformAdmin = role === 'platform_admin';
   const isTenantAdmin = role === 'admin';
+  const isManager = role === 'manager';
+  const isOwner = role === 'owner';
+  const isStaff = role === 'staff';
 
-  // Define navigation items based on user role
-  const getNavItems = (): NavItem[] => {
-    // Platform Admin Navigation
-    if (isPlatformAdmin) {
-      return [
-        { name: 'Platform Dashboard', icon: FiGrid, href: '/platform-admin/dashboard' },
-        { name: 'All Tenants', icon: FiDatabase, href: '/platform-admin/tenants' },
-        { name: 'Approval Queue', icon: FiCheckCircle, href: '/platform-admin/approval-queue', badge: '3' },
-        { name: 'Platform Settings', icon: FiSliders, href: '/platform-admin/settings' },
-      ];
-    }
+  // Core Business Modules - Available to Manager, Owner, and Staff (NOT Platform Admin or Tenant Admin)
+  const coreModules: NavItem[] = [
+    { name: 'Dashboard', icon: FiHome, href: '/dashboard' },
+    { name: 'Leads', icon: FiFileText, href: '/modules/Leads' },
+    { name: 'Clients', icon: FiUsers, href: '/modules/Clients' },
+    { name: 'Quotations', icon: FiFileText, href: '/modules/Quotations' },
+    { name: 'Orders', icon: FiShoppingCart, href: '/modules/Orders' },
+    { name: 'Invoices', icon: FiDollarSign, href: '/modules/Invoices' },
+    { name: 'Payments', icon: FiCreditCard, href: '/modules/Payments' },
+    // Analytics only for Manager and Owner (NOT Staff)
+    { name: 'Analytics', icon: FiTrendingUp, href: '/dashboard/finance', roles: ['manager', 'owner'] },
+  ];
 
-    // Tenant Admin Navigation
-    if (isTenantAdmin) {
-      return [
-        { name: 'Dashboard', icon: FiHome, href: '/dashboard' },
-        { name: 'Field Builder', icon: FiLayers, href: '/admin/field-builder' },
-        { name: 'Workflow Builder', icon: FiGitBranch, href: '/admin/workflow-builder' },
-        { name: 'Users & Teams', icon: FiUsers, href: '/admin/users' },
-        { name: 'Settings', icon: FiSettings, href: '/admin/settings' },
-        { name: 'Modules', icon: FiBox, href: '/dashboard', roles: ['admin'] },
-      ];
-    }
+  // Tenant Admin Tools - Only for Tenant Admin (admin role)
+  const tenantAdminTools: NavItem[] = [
+    { name: 'Users', icon: FiUsers, href: '/tenant-admin/users' },
+    { name: 'Field Builder', icon: FiLayers, href: '/tenant-admin/field-builder' },
+    { name: 'Workflow Builder', icon: FiGitBranch, href: '/tenant-admin/workflow-builder' },
+  ];
 
-    // End User Navigation (default)
-    return [
-      { name: 'Dashboard', icon: FiHome, href: '/dashboard' },
-      { name: 'Leads', icon: FiFileText, href: '/modules/Leads' },
-      { name: 'Clients', icon: FiUsers, href: '/modules/Clients' },
-      { name: 'Quotations', icon: FiFileText, href: '/modules/Quotations' },
-      { name: 'Orders', icon: FiShoppingCart, href: '/modules/Orders' },
-      { name: 'Invoices', icon: FiDollarSign, href: '/modules/Invoices' },
-      { name: 'Payments', icon: FiCreditCard, href: '/modules/Payments' },
-      { name: 'Finance Reports', icon: FiTrendingUp, href: '/dashboard/finance' },
-    ];
-  };
-
-  const navItems = getNavItems();
+  // Platform Admin Tools - Only for platform_admin (ONLY tenant management)
+  const platformAdminTools: NavItem[] = [
+    { name: 'Tenants', icon: FiDatabase, href: '/platform-admin/tenants' },
+    { name: 'Approval Queue', icon: FiCheckCircle, href: '/platform-admin/approval-queue', badge: '3' },
+    { name: 'Settings', icon: FiSliders, href: '/platform-admin/settings' },
+  ];
 
   const handleLogout = async () => {
     await signOut({ redirect: true, callbackUrl: '/auth/signin' });
@@ -151,11 +142,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
               Easy2Work
             </Text>
             <Badge 
-              colorScheme={isPlatformAdmin ? 'orange' : isTenantAdmin ? 'green' : 'blue'} 
+              colorScheme={isPlatformAdmin ? 'orange' : isTenantAdmin ? 'purple' : isManager ? 'green' : 'blue'} 
               fontSize="xs"
               variant={isPlatformAdmin ? 'solid' : 'subtle'}
             >
-              {isPlatformAdmin ? 'Platform' : isTenantAdmin ? 'Admin' : 'User'}
+              {isPlatformAdmin ? 'Platform' : isTenantAdmin ? 'Tenant Admin' : isManager ? 'Manager' : isOwner ? 'Owner' : 'User'}
             </Badge>
           </VStack>
         </HStack>
@@ -169,39 +160,106 @@ export default function AppLayout({ children }: AppLayoutProps) {
         p={3} 
         overflowY="auto"
       >
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Tooltip key={item.name} label={item.name} placement="right">
-              <Button
-                onClick={() => router.push(item.href)}
-                variant={isActive ? 'solid' : 'ghost'}
-                colorScheme={
-                  isPlatformAdmin ? (isActive ? 'orange' : 'gray') : 
-                  isActive ? 'primary' : 'gray'
+        {/* Platform Admin Section */}
+        {isPlatformAdmin && (
+          <>
+            <Text fontSize="xs" fontWeight="bold" color="gray.400" px={3} pt={2} pb={1}>
+              PLATFORM ADMIN
+            </Text>
+            {platformAdminTools.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Button
+                  key={item.name}
+                  onClick={() => router.push(item.href)}
+                  variant={isActive ? 'solid' : 'ghost'}
+                  colorScheme={isActive ? 'orange' : 'gray'}
+                  justifyContent="flex-start"
+                  leftIcon={<Icon as={item.icon} />}
+                  size="md"
+                  fontWeight={isActive ? 'bold' : 'normal'}
+                  color={!isActive ? 'gray.300' : undefined}
+                  _hover={{ bg: 'gray.700' }}
+                >
+                  <Text flex={1} textAlign="left" isTruncated>
+                    {item.name}
+                  </Text>
+                  {item.badge && (
+                    <Badge colorScheme="red" ml={2}>
+                      {item.badge}
+                    </Badge>
+                  )}
+                </Button>
+              );
+            })}
+          </>
+        )}
+
+        {/* Tenant Admin Section - ONLY for Tenant Admin (admin role) */}
+        {isTenantAdmin && (
+          <>
+            <Text fontSize="xs" fontWeight="bold" color="purple.600" px={3} pt={2} pb={1}>
+              ⚙️ TENANT CONFIGURATION
+            </Text>
+            {tenantAdminTools.map((item) => {
+              const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+              return (
+                <Button
+                  key={item.name}
+                  onClick={() => router.push(item.href)}
+                  variant={isActive ? 'solid' : 'ghost'}
+                  colorScheme={isActive ? 'purple' : 'gray'}
+                  justifyContent="flex-start"
+                  leftIcon={<Icon as={item.icon} />}
+                  size="md"
+                  fontWeight={isActive ? 'bold' : 'normal'}
+                  _hover={{ bg: 'purple.50' }}
+                >
+                  <Text flex={1} textAlign="left" isTruncated>
+                    {item.name}
+                  </Text>
+                </Button>
+              );
+            })}
+          </>
+        )}
+
+        {/* Core Business Modules - Manager, Owner, Staff (NOT Platform Admin or Tenant Admin) */}
+        {!isPlatformAdmin && !isTenantAdmin && (
+          <>
+            <Text fontSize="xs" fontWeight="bold" color="gray.500" px={3} pt={2} pb={1}>
+              BUSINESS MODULES
+            </Text>
+            {coreModules.map((item) => {
+              // Check if item has role restrictions
+              if (item.roles && item.roles.length > 0) {
+                // Skip if current user role is not in allowed roles
+                if (!item.roles.includes(role || '')) {
+                  return null;
                 }
-                justifyContent="flex-start"
-                leftIcon={<Icon as={item.icon} />}
-                size="md"
-                fontWeight={isActive ? 'bold' : 'normal'}
-                position="relative"
-                color={isPlatformAdmin && !isActive ? 'gray.300' : undefined}
-                _hover={{
-                  bg: isPlatformAdmin ? 'gray.700' : 'primary.50',
-                }}
-              >
-                <Text flex={1} textAlign="left" isTruncated>
-                  {item.name}
-                </Text>
-                {item.badge && (
-                  <Badge colorScheme="red" ml={2}>
-                    {item.badge}
-                  </Badge>
-                )}
-              </Button>
-            </Tooltip>
-          );
-        })}
+              }
+              
+              const isActive = pathname === item.href;
+              return (
+                <Button
+                  key={item.name}
+                  onClick={() => router.push(item.href)}
+                  variant={isActive ? 'solid' : 'ghost'}
+                  colorScheme={isActive ? 'blue' : 'gray'}
+                  justifyContent="flex-start"
+                  leftIcon={<Icon as={item.icon} />}
+                  size="md"
+                  fontWeight={isActive ? 'bold' : 'normal'}
+                  _hover={{ bg: 'gray.100' }}
+                >
+                  <Text flex={1} textAlign="left" isTruncated>
+                    {item.name}
+                  </Text>
+                </Button>
+              );
+            })}
+          </>
+        )}
       </VStack>
 
       {/* User Profile Section */}
@@ -225,7 +283,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 size="sm" 
                 name={session?.user?.name || undefined} 
                 src={session?.user?.image ?? undefined}
-                bg={isPlatformAdmin ? 'orange.500' : isTenantAdmin ? 'primary.500' : 'blue.500'}
+                bg={isPlatformAdmin ? 'orange.500' : isTenantAdmin ? 'purple.500' : isManager ? 'green.500' : 'blue.500'}
               />
               <VStack align="start" spacing={0} flex={1}>
                 <Text 
@@ -237,21 +295,30 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 >
                   {session?.user?.name}
                 </Text>
-                <Tooltip 
+                  <Tooltip 
                   label={
                     isPlatformAdmin ? 'Manages entire platform and all tenants' : 
                     isTenantAdmin ? 'Manages tenant configuration and users' : 
+                    isManager ? 'Manages business operations and reports' :
+                    isOwner ? 'Company owner with full business access' :
                     'Regular user with module access'
                   }
                   placement="top"
                 >
                   <Badge 
-                    colorScheme={roleColors[role as keyof typeof roleColors] || 'gray'} 
+                    colorScheme={
+                      isPlatformAdmin ? 'orange' : 
+                      isTenantAdmin ? 'purple' : 
+                      isManager ? 'green' : 
+                      'gray'
+                    } 
                     fontSize="xs"
                     variant={isPlatformAdmin ? 'solid' : 'subtle'}
                   >
                     {isPlatformAdmin ? 'Platform Admin' : 
-                     isTenantAdmin ? 'Tenant Admin' : 'User'}
+                     isTenantAdmin ? 'Tenant Admin' : 
+                     isManager ? 'Manager' :
+                     isOwner ? 'Owner' : 'User'}
                   </Badge>
                 </Tooltip>
               </VStack>
@@ -309,10 +376,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
               Easy2Work
             </Text>
             <Badge 
-              colorScheme={isPlatformAdmin ? 'orange' : isTenantAdmin ? 'green' : 'blue'} 
+              colorScheme={isPlatformAdmin ? 'orange' : isTenantAdmin ? 'purple' : isManager ? 'green' : 'blue'} 
               fontSize="xs"
+              variant={isPlatformAdmin ? 'solid' : 'subtle'}
             >
-              {isPlatformAdmin ? 'Platform' : isTenantAdmin ? 'Admin' : 'User'}
+              {isPlatformAdmin ? 'Platform' : isTenantAdmin ? 'Tenant Admin' : isManager ? 'Manager' : isOwner ? 'Owner' : 'User'}
             </Badge>
           </HStack>
           <Box w="40px" /> {/* Spacer for alignment */}

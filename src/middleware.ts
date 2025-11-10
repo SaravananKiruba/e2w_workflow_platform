@@ -19,17 +19,42 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(signInUrl);
   }
 
-  // Platform Admin route guard - only platform_admin role can access
+  // Check if tenant is active (block suspended/inactive tenants)
+  if (token.tenantStatus && token.tenantStatus !== 'active') {
+    return NextResponse.redirect(new URL('/unauthorized?reason=tenant_inactive', request.url));
+  }
+
+  // Platform Admin route guard - ONLY platform_admin role
   if (request.nextUrl.pathname.startsWith('/platform-admin')) {
     if (token.role !== 'platform_admin') {
-      return NextResponse.redirect(new URL('/unauthorized', request.url));
+      return NextResponse.redirect(new URL('/unauthorized?reason=platform_admin_only', request.url));
     }
   }
 
-  // Admin route guard - admin, manager, and platform_admin can access
+  // Tenant Admin route guard - ONLY admin role (configuration management)
+  if (request.nextUrl.pathname.startsWith('/tenant-admin')) {
+    if (token.role !== 'admin') {
+      return NextResponse.redirect(new URL('/unauthorized?reason=tenant_admin_only', request.url));
+    }
+  }
+
+  // Analytics/Finance Dashboard - ONLY manager and owner (NOT staff)
+  if (request.nextUrl.pathname.startsWith('/dashboard/finance')) {
+    if (!['manager', 'owner'].includes(token.role as string)) {
+      return NextResponse.redirect(new URL('/unauthorized?reason=manager_only', request.url));
+    }
+  }
+
+  // Legacy /admin routes - redirect to /tenant-admin for non-platform admins
+  if (request.nextUrl.pathname.startsWith('/admin') && token.role !== 'platform_admin') {
+    const newPath = request.nextUrl.pathname.replace('/admin', '/tenant-admin');
+    return NextResponse.redirect(new URL(newPath + request.nextUrl.search, request.url));
+  }
+
+  // Admin route guard (legacy support) - admin, manager, and platform_admin can access
   if (request.nextUrl.pathname.startsWith('/admin')) {
     if (!['admin', 'manager', 'platform_admin'].includes(token.role as string)) {
-      return NextResponse.redirect(new URL('/unauthorized', request.url));
+      return NextResponse.redirect(new URL('/unauthorized?reason=admin_required', request.url));
     }
   }
 

@@ -75,6 +75,10 @@ async function main() {
       domain: 'demo.easy2work.com',
       status: 'active',
       subscriptionTier: 'professional',
+      storageUsedMB: 25.5,
+      recordCount: 150,
+      maxUsers: 50,
+      maxStorage: 5000, // 5GB
       settings: JSON.stringify({
         timezone: 'Asia/Kolkata',
         currency: 'INR',
@@ -88,6 +92,48 @@ async function main() {
   })
 
   console.log('✅ Demo tenant created:', demoTenant.name)
+
+  // Create another test tenant
+  const acmeTenant = await prisma.tenant.upsert({
+    where: { slug: 'acme' },
+    update: {},
+    create: {
+      name: 'Acme Corporation',
+      slug: 'acme',
+      domain: 'acme.easy2work.com',
+      status: 'active',
+      subscriptionTier: 'enterprise',
+      storageUsedMB: 123.75,
+      recordCount: 542,
+      maxUsers: 100,
+      maxStorage: 10000, // 10GB
+      settings: JSON.stringify({
+        timezone: 'Asia/Kolkata',
+        currency: 'INR',
+        dateFormat: 'DD/MM/YYYY',
+      }),
+    },
+  })
+
+  console.log('✅ Acme tenant created:', acmeTenant.name)
+
+  // Create inactive tenant for testing
+  const inactiveTenant = await prisma.tenant.upsert({
+    where: { slug: 'inactive-test' },
+    update: {},
+    create: {
+      name: 'Inactive Test Company',
+      slug: 'inactive-test',
+      status: 'inactive',
+      subscriptionTier: 'free',
+      storageUsedMB: 5.2,
+      recordCount: 25,
+      maxUsers: 5,
+      maxStorage: 500, // 500MB
+    },
+  })
+
+  console.log('✅ Inactive tenant created:', inactiveTenant.name)
 
   // Create demo branch
   const demoBranch = await prisma.branch.upsert({
@@ -114,7 +160,53 @@ async function main() {
 
   console.log('✅ Demo branch created:', demoBranch.name)
 
-  // Create demo user
+  // Create Acme branch
+  const acmeBranch = await prisma.branch.upsert({
+    where: { tenantId_code: { tenantId: acmeTenant.id, code: 'HQ' } },
+    update: {},
+    create: {
+      tenantId: acmeTenant.id,
+      name: 'Acme HQ',
+      code: 'HQ',
+      address: JSON.stringify({
+        street: '456 Tech Park',
+        city: 'Bangalore',
+        state: 'Karnataka',
+        pincode: '560001',
+        country: 'India',
+      }),
+      contact: JSON.stringify({
+        phone: '+91 80 9876 5432',
+        email: 'hq@acme.com',
+      }),
+    },
+  })
+
+  console.log('✅ Acme branch created:', acmeBranch.name)
+
+  // ==========================================
+  // CREATE USERS WITH DIFFERENT ROLES
+  // ==========================================
+
+  // 1. PLATFORM ADMIN (Super Admin for SaaS Provider)
+  const platformAdminPassword = await bcrypt.hash('Platform@123', 10)
+  const platformAdmin = await prisma.user.upsert({
+    where: { email: 'platform@easy2work.com' },
+    update: {},
+    create: {
+      email: 'platform@easy2work.com',
+      name: 'Platform Administrator',
+      password: platformAdminPassword,
+      tenantId: demoTenant.id,
+      branchId: demoBranch.id,
+      role: 'platform_admin',
+      status: 'active',
+    },
+  })
+
+  console.log('✅ Platform admin created:', platformAdmin.email)
+
+  // 2. TENANT ADMIN (Demo Company)
   const hashedPassword = await bcrypt.hash('demo@123', 10)
   const demoUser = await prisma.user.upsert({
     where: { email: 'demo@easy2work.com' },
@@ -130,25 +222,80 @@ async function main() {
     },
   })
 
-  console.log('✅ Demo user created:', demoUser.email)
+  console.log('✅ Demo admin (tenant admin) created:', demoUser.email)
 
-  // Create platform admin user
-  const platformAdminPassword = await bcrypt.hash('Platform@123', 10)
-  const platformAdmin = await prisma.user.upsert({
-    where: { email: 'platform@easy2work.com' },
+  // 3. MANAGER (Demo Company)
+  const managerPassword = await bcrypt.hash('Manager@123', 10)
+  const manager = await prisma.user.upsert({
+    where: { email: 'manager@demo.com' },
     update: {},
     create: {
-      email: 'platform@easy2work.com',
-      name: 'Platform Administrator',
-      password: platformAdminPassword,
-      tenantId: demoTenant.id, // Link to demo tenant for now
+      email: 'manager@demo.com',
+      name: 'Sales Manager',
+      password: managerPassword,
+      tenantId: demoTenant.id,
       branchId: demoBranch.id,
-      role: 'platform_admin',
+      role: 'manager',
       status: 'active',
     },
   })
 
-  console.log('✅ Platform admin created:', platformAdmin.email)
+  console.log('✅ Manager created:', manager.email)
+
+  // 4. STAFF (Demo Company)
+  const staffPassword = await bcrypt.hash('Staff@123', 10)
+  const staff = await prisma.user.upsert({
+    where: { email: 'staff@demo.com' },
+    update: {},
+    create: {
+      email: 'staff@demo.com',
+      name: 'John Staff',
+      password: staffPassword,
+      tenantId: demoTenant.id,
+      branchId: demoBranch.id,
+      role: 'staff',
+      status: 'active',
+    },
+  })
+
+  console.log('✅ Staff user created:', staff.email)
+
+  // 5. TENANT ADMIN (Acme Corporation)
+  const acmeAdminPassword = await bcrypt.hash('Acme@123', 10)
+  const acmeAdmin = await prisma.user.upsert({
+    where: { email: 'admin@acme.com' },
+    update: {},
+    create: {
+      email: 'admin@acme.com',
+      name: 'Acme Administrator',
+      password: acmeAdminPassword,
+      tenantId: acmeTenant.id,
+      branchId: acmeBranch.id,
+      role: 'admin',
+      status: 'active',
+    },
+  })
+
+  console.log('✅ Acme admin (tenant admin) created:', acmeAdmin.email)
+
+  console.log('\n📋 User Credentials Summary:')
+  console.log('================================')
+  console.log('Platform Admin:')
+  console.log('  Email: platform@easy2work.com')
+  console.log('  Pass:  Platform@123')
+  console.log('\nDemo Tenant Admin:')
+  console.log('  Email: demo@easy2work.com')
+  console.log('  Pass:  demo@123')
+  console.log('\nDemo Manager:')
+  console.log('  Email: manager@demo.com')
+  console.log('  Pass:  Manager@123')
+  console.log('\nDemo Staff:')
+  console.log('  Email: staff@demo.com')
+  console.log('  Pass:  Staff@123')
+  console.log('\nAcme Admin:')
+  console.log('  Email: admin@acme.com')
+  console.log('  Pass:  Acme@123')
+  console.log('================================\n')
 
   // Initialize auto-numbering sequences for demo tenant
   const autoNumberModules = [

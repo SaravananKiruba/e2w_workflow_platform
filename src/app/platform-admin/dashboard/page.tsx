@@ -39,6 +39,18 @@ interface PlatformStats {
 
 export default function PlatformAdminDashboard() {
   const router = useRouter();
+  
+  // Platform admin doesn't need a separate dashboard - redirect to tenants
+  useEffect(() => {
+    router.push('/platform-admin/tenants');
+  }, [router]);
+
+  return null;
+}
+
+// OLD CODE - Keeping for reference if needed later
+function OldPlatformDashboard() {
+  const router = useRouter();
   const toast = useToast();
   const [stats, setStats] = useState<PlatformStats>({
     totalTenants: 0,

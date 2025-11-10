@@ -42,10 +42,12 @@ import {
 import {
   FiPlus,
   FiEdit,
-  FiTrash,
   FiUsers,
   FiDatabase,
   FiActivity,
+  FiToggleLeft,
+  FiToggleRight,
+  FiHardDrive,
 } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 
@@ -149,18 +151,33 @@ export default function TenantsPage() {
   };
 
   const handleDelete = async (tenantId: string) => {
-    if (!confirm('Are you sure you want to delete this tenant? This action cannot be undone.')) {
+    toast({
+      title: 'Delete Not Allowed',
+      description: 'Please use deactivate instead to preserve tenant data.',
+      status: 'warning',
+      duration: 4000,
+    });
+  };
+
+  const handleToggleStatus = async (tenantId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    const action = newStatus === 'active' ? 'activate' : 'deactivate';
+
+    if (!confirm(`Are you sure you want to ${action} this tenant? ${newStatus === 'inactive' ? 'Users will not be able to login.' : 'Users will regain access.'}`)) {
       return;
     }
 
     try {
       const res = await fetch(`/api/admin/tenants/${tenantId}`, {
-        method: 'DELETE',
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
       });
 
       if (res.ok) {
         toast({
-          title: 'Tenant deleted',
+          title: `Tenant ${action}d`,
+          description: `The tenant has been ${action}d successfully.`,
           status: 'success',
           duration: 3000,
         });
@@ -168,7 +185,7 @@ export default function TenantsPage() {
       } else {
         const error = await res.json();
         toast({
-          title: 'Deletion failed',
+          title: 'Operation failed',
           description: error.error,
           status: 'error',
           duration: 3000,
@@ -176,7 +193,7 @@ export default function TenantsPage() {
       }
     } catch (error: any) {
       toast({
-        title: 'Error deleting tenant',
+        title: 'Error',
         description: error.message,
         status: 'error',
         duration: 3000,
@@ -222,7 +239,7 @@ export default function TenantsPage() {
         </HStack>
 
         {/* Summary Stats */}
-        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+        <SimpleGrid columns={{ base: 1, md: 4 }} spacing={4}>
           <Box bg="white" p={4} borderRadius="lg" border="1px" borderColor="gray.200">
             <Stat>
               <HStack>
@@ -251,12 +268,25 @@ export default function TenantsPage() {
             <Stat>
               <HStack>
                 <Icon as={FiDatabase} boxSize={6} color="purple.500" />
-                <StatLabel>Total Users</StatLabel>
+                <StatLabel>Total Records</StatLabel>
               </HStack>
               <StatNumber>
-                {tenants.reduce((sum, t) => sum + (t._count?.users || 0), 0)}
+                {tenants.reduce((sum, t) => sum + (t.recordCount || 0), 0).toLocaleString()}
               </StatNumber>
               <StatHelpText>Across all tenants</StatHelpText>
+            </Stat>
+          </Box>
+
+          <Box bg="white" p={4} borderRadius="lg" border="1px" borderColor="gray.200">
+            <Stat>
+              <HStack>
+                <Icon as={FiHardDrive} boxSize={6} color="orange.500" />
+                <StatLabel>Total Storage</StatLabel>
+              </HStack>
+              <StatNumber>
+                {(tenants.reduce((sum, t) => sum + (t.storageUsedMB || 0), 0) / 1024).toFixed(2)} GB
+              </StatNumber>
+              <StatHelpText>Storage consumed</StatHelpText>
             </Stat>
           </Box>
         </SimpleGrid>
@@ -276,8 +306,9 @@ export default function TenantsPage() {
                   <Th>Status</Th>
                   <Th>Subscription</Th>
                   <Th>Users</Th>
-                  <Th>Modules</Th>
-                  <Th>Workflows</Th>
+                  <Th>Records</Th>
+                  <Th>Storage (MB)</Th>
+                  <Th>Limits</Th>
                   <Th>Created</Th>
                   <Th>Actions</Th>
                 </Tr>
@@ -300,8 +331,27 @@ export default function TenantsPage() {
                       </Badge>
                     </Td>
                     <Td>{tenant._count?.users || 0}</Td>
-                    <Td>{tenant._count?.modules || 0}</Td>
-                    <Td>{tenant._count?.workflows || 0}</Td>
+                    <Td>{(tenant.recordCount || 0).toLocaleString()}</Td>
+                    <Td>
+                      <VStack align="start" spacing={0}>
+                        <Text fontSize="sm" fontWeight="600">
+                          {(tenant.storageUsedMB || 0).toFixed(2)}
+                        </Text>
+                        <Text fontSize="xs" color="gray.500">
+                          / {(tenant.maxStorage || 1000).toFixed(0)} MB
+                        </Text>
+                      </VStack>
+                    </Td>
+                    <Td>
+                      <VStack align="start" spacing={0}>
+                        <Text fontSize="xs" color="gray.600">
+                          Users: {tenant._count?.users || 0}/{tenant.maxUsers || 10}
+                        </Text>
+                        <Text fontSize="xs" color="gray.600">
+                          Modules: {tenant._count?.modules || 0}
+                        </Text>
+                      </VStack>
+                    </Td>
                     <Td fontSize="sm">
                       {new Date(tenant.createdAt).toLocaleDateString()}
                     </Td>
@@ -315,12 +365,12 @@ export default function TenantsPage() {
                           onClick={() => openEditModal(tenant)}
                         />
                         <IconButton
-                          aria-label="Delete tenant"
-                          icon={<Icon as={FiTrash} />}
+                          aria-label={tenant.status === 'active' ? 'Deactivate tenant' : 'Activate tenant'}
+                          icon={<Icon as={tenant.status === 'active' ? FiToggleRight : FiToggleLeft} />}
                           size="sm"
                           variant="ghost"
-                          colorScheme="red"
-                          onClick={() => handleDelete(tenant.id)}
+                          colorScheme={tenant.status === 'active' ? 'orange' : 'green'}
+                          onClick={() => handleToggleStatus(tenant.id, tenant.status)}
                         />
                       </HStack>
                     </Td>
