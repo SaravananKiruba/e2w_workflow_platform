@@ -5,9 +5,9 @@ import { prisma } from '@/lib/prisma';
 export async function GET(req: NextRequest) {
   const context = await getTenantContext();
   
-  // Only system admins can access all tenants
-  if (!context || context.userRole !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+  // Only platform admins can access all tenants
+  if (!context || context.userRole !== 'platform_admin') {
+    return NextResponse.json({ error: 'Forbidden - Platform Admin access required' }, { status: 403 });
   }
 
   try {
@@ -58,8 +58,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const context = await getTenantContext();
   
-  if (!context || context.userRole !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+  if (!context || context.userRole !== 'platform_admin') {
+    return NextResponse.json({ error: 'Forbidden - Platform Admin access required' }, { status: 403 });
   }
 
   try {

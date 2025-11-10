@@ -38,6 +38,13 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Analytics/Finance Dashboard - ONLY manager and owner (NOT staff)
+  if (request.nextUrl.pathname.startsWith('/dashboard/finance')) {
+    if (!['manager', 'owner'].includes(token.role as string)) {
+      return NextResponse.redirect(new URL('/unauthorized?reason=manager_only', request.url));
+    }
+  }
+
   // Legacy /admin routes - redirect to /tenant-admin for non-platform admins
   if (request.nextUrl.pathname.startsWith('/admin') && token.role !== 'platform_admin') {
     const newPath = request.nextUrl.pathname.replace('/admin', '/tenant-admin');

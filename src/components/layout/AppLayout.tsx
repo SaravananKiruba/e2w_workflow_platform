@@ -80,7 +80,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     { name: 'Orders', icon: FiShoppingCart, href: '/modules/Orders' },
     { name: 'Invoices', icon: FiDollarSign, href: '/modules/Invoices' },
     { name: 'Payments', icon: FiCreditCard, href: '/modules/Payments' },
-    { name: 'Analytics', icon: FiTrendingUp, href: '/dashboard/finance' },
+    // Analytics only for Manager and Owner (NOT Staff)
+    { name: 'Analytics', icon: FiTrendingUp, href: '/dashboard/finance', roles: ['manager', 'owner'] },
   ];
 
   // Tenant Admin Tools - Only for Tenant Admin (admin role)
@@ -230,6 +231,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
               BUSINESS MODULES
             </Text>
             {coreModules.map((item) => {
+              // Check if item has role restrictions
+              if (item.roles && item.roles.length > 0) {
+                // Skip if current user role is not in allowed roles
+                if (!item.roles.includes(role || '')) {
+                  return null;
+                }
+              }
+              
               const isActive = pathname === item.href;
               return (
                 <Button

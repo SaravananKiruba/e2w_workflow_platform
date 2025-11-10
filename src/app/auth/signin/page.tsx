@@ -202,33 +202,8 @@ export default function SignIn() {
               </form>
             </Box>
 
-            {/* Demo Credentials */}
-            <Box
-              p={4}
-              bg="whiteAlpha.900"
-              borderRadius="xl"
-              w="full"
-              shadow="md"
-            >
-              <VStack spacing={2} align="start">
-                <Text fontSize="sm" fontWeight="bold" color="purple.700">
-                  🔑 Demo Credentials
-                </Text>
-                <VStack spacing={1} align="start" w="full" fontSize="sm">
-                  <Text color="gray.700" fontFamily="mono">
-                    📧 demo@easy2work.com
-                  </Text>
-                  <Text color="gray.700" fontFamily="mono">
-                    🔒 demo@123
-                  </Text>
-                </VStack>
-              </VStack>
-            </Box>
-
-            {/* Footer */}
-            <Text fontSize="xs" color="whiteAlpha.900" textAlign="center">
-              Lead → Client → Quotation → Order → Invoice → Payment
-            </Text>
+          
+           
           </VStack>
         </Fade>
       </Container>
