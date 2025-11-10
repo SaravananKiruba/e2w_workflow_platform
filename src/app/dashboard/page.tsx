@@ -97,6 +97,27 @@ export default function Dashboard() {
   const [stats, setStats] = useState<ModuleStats>({});
   const [loading, setLoading] = useState(true);
 
+  // Role-based redirect
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      const role = session.user.role;
+      
+      // Platform Admin -> Tenant Management (not business dashboard)
+      if (role === 'platform_admin') {
+        router.push('/platform-admin/tenants');
+        return;
+      }
+      
+      // Tenant Admin -> Configuration Management (not business dashboard)
+      if (role === 'admin') {
+        router.push('/tenant-admin');
+        return;
+      }
+      
+      // Manager, Owner, Staff can see business dashboard - continue loading
+    }
+  }, [status, session, router]);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin?callbackUrl=/dashboard');

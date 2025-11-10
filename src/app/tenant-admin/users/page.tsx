@@ -121,14 +121,15 @@ export default function UserManagementPage() {
   };
 
   return (
-    <VStack spacing={6} align="stretch">
-      <HStack justify="space-between">
-        <Box>
-          <Heading size="lg">User Management</Heading>
-          <Text color="gray.600" mt={1}>
-            Manage users in your organization
-          </Text>
-        </Box>
+    <Box p={8}>
+      <VStack spacing={6} align="stretch">
+        <HStack justify="space-between">
+          <Box>
+            <Heading size="lg">User Management</Heading>
+            <Text color="gray.600" mt={1}>
+              Manage users in your organization
+            </Text>
+          </Box>
         <Button
           leftIcon={<Icon as={FiPlus} />}
           colorScheme="purple"
@@ -270,6 +271,7 @@ export default function UserManagementPage() {
           </ModalFooter>
         </ModalContent>
       </Modal>
-    </VStack>
+      </VStack>
+    </Box>
   );
 }

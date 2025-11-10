@@ -73,15 +73,16 @@ export default function TenantAdminDashboard() {
   ];
 
   return (
-    <VStack spacing={6} align="stretch">
-      <Box>
-        <Heading size="lg" color="purple.700">
-          Tenant Admin Dashboard
-        </Heading>
-        <Text color="gray.600" mt={2}>
-          Manage your organization's configuration and settings
-        </Text>
-      </Box>
+    <Box p={8}>
+      <VStack spacing={6} align="stretch">
+        <Box>
+          <Heading size="lg" color="purple.700">
+            Tenant Configuration
+          </Heading>
+          <Text color="gray.600" mt={2}>
+            Manage your organization's users, fields, and workflows
+          </Text>
+        </Box>
 
       {/* Stats */}
       <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>
@@ -181,6 +182,7 @@ export default function TenantAdminDashboard() {
           </Text>
         </VStack>
       </Box>
-    </VStack>
+      </VStack>
+    </Box>
   );
 }

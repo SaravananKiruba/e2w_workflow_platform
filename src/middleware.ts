@@ -31,9 +31,9 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Tenant Admin route guard - admin and manager roles (NOT staff)
+  // Tenant Admin route guard - ONLY admin role (configuration management)
   if (request.nextUrl.pathname.startsWith('/tenant-admin')) {
-    if (!['admin', 'manager'].includes(token.role as string)) {
+    if (token.role !== 'admin') {
       return NextResponse.redirect(new URL('/unauthorized?reason=tenant_admin_only', request.url));
     }
   }

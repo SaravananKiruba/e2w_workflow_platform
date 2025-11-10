@@ -35,6 +35,7 @@ export default function SignIn() {
   const searchParams = useSearchParams();
   const toast = useToast();
 
+  // Dashboard will handle role-based redirect
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
 
   const handleSubmit = async (e: React.FormEvent) => {

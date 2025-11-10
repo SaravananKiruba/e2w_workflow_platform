@@ -66,10 +66,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const role = session?.user?.role;
   const isPlatformAdmin = role === 'platform_admin';
-  const isAdmin = role === 'admin' || role === 'manager';
+  const isTenantAdmin = role === 'admin';
+  const isManager = role === 'manager';
+  const isOwner = role === 'owner';
   const isStaff = role === 'staff';
 
-  // Core Modules - Available to ALL users
+  // Core Business Modules - Available to Manager, Owner, and Staff (NOT Platform Admin or Tenant Admin)
   const coreModules: NavItem[] = [
     { name: 'Dashboard', icon: FiHome, href: '/dashboard' },
     { name: 'Leads', icon: FiFileText, href: '/modules/Leads' },
@@ -81,20 +83,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
     { name: 'Analytics', icon: FiTrendingUp, href: '/dashboard/finance' },
   ];
 
-  // Tenant Admin Tools - Only for admin/manager
+  // Tenant Admin Tools - Only for Tenant Admin (admin role)
   const tenantAdminTools: NavItem[] = [
-    { name: 'Admin Dashboard', icon: FiGrid, href: '/tenant-admin' },
+    { name: 'Users', icon: FiUsers, href: '/tenant-admin/users' },
     { name: 'Field Builder', icon: FiLayers, href: '/tenant-admin/field-builder' },
     { name: 'Workflow Builder', icon: FiGitBranch, href: '/tenant-admin/workflow-builder' },
-    { name: 'User Management', icon: FiUsers, href: '/tenant-admin/users' },
   ];
 
-  // Platform Admin Tools - Only for platform_admin
+  // Platform Admin Tools - Only for platform_admin (ONLY tenant management)
   const platformAdminTools: NavItem[] = [
-    { name: 'Platform Dashboard', icon: FiGrid, href: '/platform-admin/dashboard' },
-    { name: 'All Tenants', icon: FiDatabase, href: '/platform-admin/tenants' },
+    { name: 'Tenants', icon: FiDatabase, href: '/platform-admin/tenants' },
     { name: 'Approval Queue', icon: FiCheckCircle, href: '/platform-admin/approval-queue', badge: '3' },
-    { name: 'Platform Settings', icon: FiSliders, href: '/platform-admin/settings' },
+    { name: 'Settings', icon: FiSliders, href: '/platform-admin/settings' },
   ];
 
   const handleLogout = async () => {
@@ -141,11 +141,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
               Easy2Work
             </Text>
             <Badge 
-              colorScheme={isPlatformAdmin ? 'orange' : isAdmin ? 'purple' : 'blue'} 
+              colorScheme={isPlatformAdmin ? 'orange' : isTenantAdmin ? 'purple' : isManager ? 'green' : 'blue'} 
               fontSize="xs"
               variant={isPlatformAdmin ? 'solid' : 'subtle'}
             >
-              {isPlatformAdmin ? 'Platform' : isAdmin ? 'Admin' : 'User'}
+              {isPlatformAdmin ? 'Platform' : isTenantAdmin ? 'Tenant Admin' : isManager ? 'Manager' : isOwner ? 'Owner' : 'User'}
             </Badge>
           </VStack>
         </HStack>
@@ -194,40 +194,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </>
         )}
 
-        {/* Core Modules Section - ALL users */}
-        {!isPlatformAdmin && (
+        {/* Tenant Admin Section - ONLY for Tenant Admin (admin role) */}
+        {isTenantAdmin && (
           <>
-            <Text fontSize="xs" fontWeight="bold" color="gray.500" px={3} pt={2} pb={1}>
-              CORE MODULES
-            </Text>
-            {coreModules.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Button
-                  key={item.name}
-                  onClick={() => router.push(item.href)}
-                  variant={isActive ? 'solid' : 'ghost'}
-                  colorScheme={isActive ? 'blue' : 'gray'}
-                  justifyContent="flex-start"
-                  leftIcon={<Icon as={item.icon} />}
-                  size="md"
-                  fontWeight={isActive ? 'bold' : 'normal'}
-                  _hover={{ bg: 'gray.100' }}
-                >
-                  <Text flex={1} textAlign="left" isTruncated>
-                    {item.name}
-                  </Text>
-                </Button>
-              );
-            })}
-          </>
-        )}
-
-        {/* Tenant Admin Section - Only admin/manager */}
-        {!isPlatformAdmin && isAdmin && (
-          <>
-            <Text fontSize="xs" fontWeight="bold" color="purple.600" px={3} pt={4} pb={1}>
-              ⚙️ TENANT ADMIN
+            <Text fontSize="xs" fontWeight="bold" color="purple.600" px={3} pt={2} pb={1}>
+              ⚙️ TENANT CONFIGURATION
             </Text>
             {tenantAdminTools.map((item) => {
               const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
@@ -242,6 +213,35 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   size="md"
                   fontWeight={isActive ? 'bold' : 'normal'}
                   _hover={{ bg: 'purple.50' }}
+                >
+                  <Text flex={1} textAlign="left" isTruncated>
+                    {item.name}
+                  </Text>
+                </Button>
+              );
+            })}
+          </>
+        )}
+
+        {/* Core Business Modules - Manager, Owner, Staff (NOT Platform Admin or Tenant Admin) */}
+        {!isPlatformAdmin && !isTenantAdmin && (
+          <>
+            <Text fontSize="xs" fontWeight="bold" color="gray.500" px={3} pt={2} pb={1}>
+              BUSINESS MODULES
+            </Text>
+            {coreModules.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Button
+                  key={item.name}
+                  onClick={() => router.push(item.href)}
+                  variant={isActive ? 'solid' : 'ghost'}
+                  colorScheme={isActive ? 'blue' : 'gray'}
+                  justifyContent="flex-start"
+                  leftIcon={<Icon as={item.icon} />}
+                  size="md"
+                  fontWeight={isActive ? 'bold' : 'normal'}
+                  _hover={{ bg: 'gray.100' }}
                 >
                   <Text flex={1} textAlign="left" isTruncated>
                     {item.name}
@@ -274,7 +274,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 size="sm" 
                 name={session?.user?.name || undefined} 
                 src={session?.user?.image ?? undefined}
-                bg={isPlatformAdmin ? 'orange.500' : isAdmin ? 'purple.500' : 'blue.500'}
+                bg={isPlatformAdmin ? 'orange.500' : isTenantAdmin ? 'purple.500' : isManager ? 'green.500' : 'blue.500'}
               />
               <VStack align="start" spacing={0} flex={1}>
                 <Text 
@@ -289,18 +289,27 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   <Tooltip 
                   label={
                     isPlatformAdmin ? 'Manages entire platform and all tenants' : 
-                                        isAdmin ? 'Manages tenant configuration and users' : 
+                    isTenantAdmin ? 'Manages tenant configuration and users' : 
+                    isManager ? 'Manages business operations and reports' :
+                    isOwner ? 'Company owner with full business access' :
                     'Regular user with module access'
                   }
                   placement="top"
                 >
                   <Badge 
-                    colorScheme={roleColors[role as keyof typeof roleColors] || 'gray'} 
+                    colorScheme={
+                      isPlatformAdmin ? 'orange' : 
+                      isTenantAdmin ? 'purple' : 
+                      isManager ? 'green' : 
+                      'gray'
+                    } 
                     fontSize="xs"
                     variant={isPlatformAdmin ? 'solid' : 'subtle'}
                   >
                     {isPlatformAdmin ? 'Platform Admin' : 
-                     isAdmin ? 'Tenant Admin' : 'User'}
+                     isTenantAdmin ? 'Tenant Admin' : 
+                     isManager ? 'Manager' :
+                     isOwner ? 'Owner' : 'User'}
                   </Badge>
                 </Tooltip>
               </VStack>
@@ -358,11 +367,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
               Easy2Work
             </Text>
             <Badge 
-              colorScheme={isPlatformAdmin ? 'orange' : isAdmin ? 'purple' : 'blue'} 
+              colorScheme={isPlatformAdmin ? 'orange' : isTenantAdmin ? 'purple' : isManager ? 'green' : 'blue'} 
               fontSize="xs"
               variant={isPlatformAdmin ? 'solid' : 'subtle'}
             >
-              {isPlatformAdmin ? 'Platform' : isAdmin ? 'Admin' : 'User'}
+              {isPlatformAdmin ? 'Platform' : isTenantAdmin ? 'Tenant Admin' : isManager ? 'Manager' : isOwner ? 'Owner' : 'User'}
             </Badge>
           </HStack>
           <Box w="40px" /> {/* Spacer for alignment */}

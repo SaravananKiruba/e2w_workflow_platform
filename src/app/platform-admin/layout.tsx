@@ -3,7 +3,7 @@
 import React from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 
-export default function TenantAdminLayout({
+export default function PlatformAdminLayout({
   children,
 }: {
   children: React.ReactNode;
