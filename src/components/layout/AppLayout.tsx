@@ -44,6 +44,10 @@ import {
   FiCheckCircle,
   FiDatabase,
   FiSliders,
+  FiPackage,
+  FiTag,
+  FiClipboard,
+  FiTruck,
 } from 'react-icons/fi';
 
 interface AppLayoutProps {
@@ -82,6 +86,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
     { name: 'Payments', icon: FiCreditCard, href: '/modules/Payments' },
     // Analytics only for Manager and Owner (NOT Staff)
     { name: 'Analytics', icon: FiTrendingUp, href: '/dashboard/finance', roles: ['manager', 'owner'] },
+  ];
+
+  // Purchase & Vendor Management Modules
+  const purchaseModules: NavItem[] = [
+    { name: 'Vendors', icon: FiUsers, href: '/modules/Vendors', roles: ['manager', 'owner'] },
+    { name: 'Rate Catalogs', icon: FiTag, href: '/modules/RateCatalogs', roles: ['manager', 'owner'] },
+    { name: 'Purchase Requests', icon: FiClipboard, href: '/modules/PurchaseRequests' }, // All staff can create PRs
+    { name: 'Purchase Orders', icon: FiShoppingCart, href: '/modules/PurchaseOrders', roles: ['manager', 'owner'] },
+    { name: 'Goods Receipts', icon: FiTruck, href: '/modules/GoodsReceipts', roles: ['manager', 'owner', 'staff'] }, // Staff can receive goods
+    { name: 'Vendor Bills', icon: FiFileText, href: '/modules/VendorBills', roles: ['manager', 'owner'] },
   ];
 
   // Tenant Admin Tools - Only for Tenant Admin (admin role)
@@ -228,7 +242,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         {!isPlatformAdmin && !isTenantAdmin && (
           <>
             <Text fontSize="xs" fontWeight="bold" color="gray.500" px={3} pt={2} pb={1}>
-              BUSINESS MODULES
+              📊 SALES MODULES
             </Text>
             {coreModules.map((item) => {
               // Check if item has role restrictions
@@ -251,6 +265,39 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   size="md"
                   fontWeight={isActive ? 'bold' : 'normal'}
                   _hover={{ bg: 'gray.100' }}
+                >
+                  <Text flex={1} textAlign="left" isTruncated>
+                    {item.name}
+                  </Text>
+                </Button>
+              );
+            })}
+
+            {/* Purchase & Vendor Management Section */}
+            <Text fontSize="xs" fontWeight="bold" color="green.600" px={3} pt={4} pb={1}>
+              🛒 PURCHASE MODULES
+            </Text>
+            {purchaseModules.map((item) => {
+              // Check if item has role restrictions
+              if (item.roles && item.roles.length > 0) {
+                // Skip if current user role is not in allowed roles
+                if (!item.roles.includes(role || '')) {
+                  return null;
+                }
+              }
+              
+              const isActive = pathname === item.href;
+              return (
+                <Button
+                  key={item.name}
+                  onClick={() => router.push(item.href)}
+                  variant={isActive ? 'solid' : 'ghost'}
+                  colorScheme={isActive ? 'green' : 'gray'}
+                  justifyContent="flex-start"
+                  leftIcon={<Icon as={item.icon} />}
+                  size="md"
+                  fontWeight={isActive ? 'bold' : 'normal'}
+                  _hover={{ bg: 'green.50' }}
                 >
                   <Text flex={1} textAlign="left" isTruncated>
                     {item.name}

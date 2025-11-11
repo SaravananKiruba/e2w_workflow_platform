@@ -80,21 +80,13 @@ interface ModuleInfo {
   version: number;
 }
 
-const AVAILABLE_MODULES = [
-  { value: 'Leads', label: 'Leads' },
-  { value: 'Clients', label: 'Clients' },
-  { value: 'Quotations', label: 'Quotations' },
-  { value: 'Orders', label: 'Orders' },
-  { value: 'Invoices', label: 'Invoices' },
-  { value: 'Payments', label: 'Payments' },
-];
-
 export default function FieldBuilderPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
 
+  const [availableModules, setAvailableModules] = useState<Array<{ value: string; label: string }>>([]);
   const [selectedModule, setSelectedModule] = useState<string>('');
   const [moduleInfo, setModuleInfo] = useState<ModuleInfo | null>(null);
   const [fields, setFields] = useState<FieldDefinition[]>([]);
@@ -105,6 +97,32 @@ export default function FieldBuilderPage() {
   const [showPreview, setShowPreview] = useState(false);
 
   const bgColor = useColorModeValue('gray.50', 'gray.900');
+
+  // Load available modules on mount
+  useEffect(() => {
+    async function fetchModules() {
+      try {
+        const response = await fetch('/api/modules');
+        if (response.ok) {
+          const data = await response.json();
+          const modules = data.modules.map((mod: any) => ({
+            value: mod.name,
+            label: mod.displayName || mod.name,
+          }));
+          setAvailableModules(modules);
+        }
+      } catch (error) {
+        console.error('Error fetching modules:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load modules',
+          status: 'error',
+          duration: 3000,
+        });
+      }
+    }
+    fetchModules();
+  }, []);
 
   // Load module configuration when module is selected
   useEffect(() => {
@@ -423,7 +441,7 @@ export default function FieldBuilderPage() {
                 value={selectedModule}
                 onChange={(e) => setSelectedModule(e.target.value)}
               >
-                {AVAILABLE_MODULES.map((module) => (
+                {availableModules.map((module) => (
                   <option key={module.value} value={module.value}>
                     {module.label}
                   </option>

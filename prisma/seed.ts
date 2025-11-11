@@ -347,6 +347,12 @@ async function main() {
     console.error('⚠️ Some module configurations failed to seed:', error);
   }
 
+  // ==========================================
+  // PURCHASE & VENDOR MANAGEMENT (DYNAMIC)
+  // ==========================================
+  const { seedPurchaseModules } = await import('./seed-purchase-dynamic')
+  await seedPurchaseModules(demoTenant.id, demoUser.id)
+
   console.log('🎉 Seeding completed!')
 }
 
