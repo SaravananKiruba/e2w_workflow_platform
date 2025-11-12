@@ -60,6 +60,11 @@ interface FieldDefinition {
   lookupConfig?: LookupConfig;
   tableConfig?: TableConfig;
   dependencies?: DependencyRule[];
+  filterConfig?: {
+    isFilterable?: boolean;
+    isSearchable?: boolean;
+    filterOperators?: string[];
+  };
 }
 
 interface ValidationRule {
@@ -91,9 +96,11 @@ interface TableConfig {
 
 interface FieldPropertyPanelProps {
   field: FieldDefinition | null;
-  onFieldUpdate: (field: FieldDefinition) => void;
+  onFieldUpdate: (field: FieldDefinition, hotUpdate?: boolean) => void;
   onClose: () => void;
   availableFields?: string[];
+  moduleId?: string;
+  allowHotUpdates?: boolean;
 }
 
 export default function FieldPropertyPanel({
@@ -101,8 +108,11 @@ export default function FieldPropertyPanel({
   onFieldUpdate,
   onClose,
   availableFields = [],
+  moduleId,
+  allowHotUpdates = false,
 }: FieldPropertyPanelProps) {
   const [localField, setLocalField] = useState<FieldDefinition | null>(field);
+  const [isSaving, setIsSaving] = useState(false);
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
@@ -134,9 +144,14 @@ export default function FieldPropertyPanel({
     setLocalField(updatedField);
   };
 
-  const handleSave = () => {
+  const handleSave = async (hotUpdate: boolean = false) => {
     if (localField) {
-      onFieldUpdate(localField);
+      setIsSaving(true);
+      try {
+        await onFieldUpdate(localField, hotUpdate);
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -186,6 +201,67 @@ export default function FieldPropertyPanel({
     });
   };
 
+  // Week 1-2: Get available filter operators based on field data type
+  const getAvailableOperators = (dataType: string) => {
+    const operatorsByType: Record<string, { value: string; label: string }[]> = {
+      text: [
+        { value: 'equals', label: 'Equals' },
+        { value: 'notEquals', label: 'Not Equals' },
+        { value: 'contains', label: 'Contains' },
+        { value: 'startsWith', label: 'Starts With' },
+        { value: 'endsWith', label: 'Ends With' },
+        { value: 'isEmpty', label: 'Is Empty' },
+      ],
+      textarea: [
+        { value: 'contains', label: 'Contains' },
+        { value: 'isEmpty', label: 'Is Empty' },
+      ],
+      number: [
+        { value: 'equals', label: 'Equals' },
+        { value: 'notEquals', label: 'Not Equals' },
+        { value: 'greaterThan', label: 'Greater Than' },
+        { value: 'lessThan', label: 'Less Than' },
+        { value: 'between', label: 'Between' },
+      ],
+      currency: [
+        { value: 'equals', label: 'Equals' },
+        { value: 'greaterThan', label: 'Greater Than' },
+        { value: 'lessThan', label: 'Less Than' },
+        { value: 'between', label: 'Between' },
+      ],
+      date: [
+        { value: 'equals', label: 'Equals' },
+        { value: 'dateBefore', label: 'Before' },
+        { value: 'dateAfter', label: 'After' },
+        { value: 'dateBetween', label: 'Between' },
+      ],
+      datetime: [
+        { value: 'equals', label: 'Equals' },
+        { value: 'dateBefore', label: 'Before' },
+        { value: 'dateAfter', label: 'After' },
+        { value: 'dateBetween', label: 'Between' },
+      ],
+      checkbox: [
+        { value: 'equals', label: 'Equals' },
+      ],
+      dropdown: [
+        { value: 'equals', label: 'Equals' },
+        { value: 'notEquals', label: 'Not Equals' },
+        { value: 'in', label: 'In' },
+      ],
+      select: [
+        { value: 'equals', label: 'Equals' },
+        { value: 'notEquals', label: 'Not Equals' },
+      ],
+      multiselect: [
+        { value: 'in', label: 'Contains Any' },
+        { value: 'notIn', label: 'Does Not Contain' },
+      ],
+    };
+
+    return operatorsByType[dataType] || operatorsByType.text;
+  };
+
   return (
     <Box
       bg={bgColor}
@@ -228,6 +304,14 @@ export default function FieldPropertyPanel({
               {localField.dependencies && localField.dependencies.length > 0 && (
                 <Badge ml={2} colorScheme="purple">
                   {localField.dependencies.length}
+                </Badge>
+              )}
+            </Tab>
+            <Tab>
+              Filters
+              {localField.filterConfig?.isFilterable && (
+                <Badge ml={2} colorScheme="green">
+                  ✓
                 </Badge>
               )}
             </Tab>
@@ -489,6 +573,89 @@ export default function FieldPropertyPanel({
               </VStack>
             </TabPanel>
 
+            {/* Filter Configuration */}
+            <TabPanel>
+              <VStack spacing={4} align="stretch">
+                <Text fontSize="sm" fontWeight="bold" color="gray.700">
+                  Configure how this field can be filtered and searched
+                </Text>
+
+                <FormControl display="flex" alignItems="center">
+                  <FormLabel mb={0} flex={1}>
+                    Enable Filtering
+                  </FormLabel>
+                  <Switch
+                    isChecked={localField.filterConfig?.isFilterable || false}
+                    onChange={(e) =>
+                      handleChange('filterConfig', {
+                        ...localField.filterConfig,
+                        isFilterable: e.target.checked,
+                      })
+                    }
+                  />
+                </FormControl>
+
+                <FormControl display="flex" alignItems="center">
+                  <FormLabel mb={0} flex={1}>
+                    Enable Quick Search
+                  </FormLabel>
+                  <Switch
+                    isChecked={localField.filterConfig?.isSearchable || false}
+                    onChange={(e) =>
+                      handleChange('filterConfig', {
+                        ...localField.filterConfig,
+                        isSearchable: e.target.checked,
+                      })
+                    }
+                  />
+                </FormControl>
+
+                {localField.filterConfig?.isFilterable && (
+                  <Box p={4} bg="gray.50" borderRadius="md">
+                    <FormControl>
+                      <FormLabel fontSize="sm">Available Filter Operators</FormLabel>
+                      <VStack align="stretch" spacing={2}>
+                        {getAvailableOperators(localField.dataType).map((op) => (
+                          <FormControl key={op.value} display="flex" alignItems="center">
+                            <Switch
+                              size="sm"
+                              isChecked={
+                                localField.filterConfig?.filterOperators?.includes(op.value) ?? true
+                              }
+                              onChange={(e) => {
+                                const currentOps = localField.filterConfig?.filterOperators || [];
+                                const newOps = e.target.checked
+                                  ? [...currentOps, op.value]
+                                  : currentOps.filter((o) => o !== op.value);
+                                handleChange('filterConfig', {
+                                  ...localField.filterConfig,
+                                  filterOperators: newOps,
+                                });
+                              }}
+                            />
+                            <FormLabel fontSize="sm" mb={0} ml={2}>
+                              {op.label}
+                            </FormLabel>
+                          </FormControl>
+                        ))}
+                      </VStack>
+                    </FormControl>
+                  </Box>
+                )}
+
+                {localField.filterConfig?.isSearchable && (
+                  <Box p={3} bg="blue.50" borderRadius="md" borderLeft="3px solid" borderColor="blue.500">
+                    <HStack>
+                      <Icon as={FiX} color="blue.600" />
+                      <Text fontSize="sm" color="blue.700">
+                        This field will be included in quick search results
+                      </Text>
+                    </HStack>
+                  </Box>
+                )}
+              </VStack>
+            </TabPanel>
+
             {/* Advanced Settings */}
             <TabPanel>
               <VStack spacing={4} align="stretch">
@@ -509,15 +676,57 @@ export default function FieldPropertyPanel({
         </Tabs>
       </Box>
 
-      {/* Footer */}
-      <HStack p={4} borderTop="1px solid" borderColor={borderColor} spacing={3}>
-        <Button flex={1} variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button flex={1} colorScheme="blue" onClick={handleSave}>
-          Save Changes
-        </Button>
-      </HStack>
+      {/* Footer - Week 3: Enhanced with hot update option */}
+      <VStack p={4} borderTop="1px solid" borderColor={borderColor} spacing={3} align="stretch">
+        {allowHotUpdates && (
+          <Box p={3} bg="green.50" borderRadius="md" borderLeft="3px solid" borderColor="green.500">
+            <HStack>
+              <Icon as={FiPlus} color="green.600" />
+              <Text fontSize="sm" color="green.700" fontWeight="medium">
+                Hot Updates Enabled: Changes will apply immediately without versioning
+              </Text>
+            </HStack>
+          </Box>
+        )}
+        
+        <HStack spacing={3}>
+          <Button flex={1} variant="outline" onClick={onClose} isDisabled={isSaving}>
+            Cancel
+          </Button>
+          
+          {allowHotUpdates ? (
+            <>
+              <Button 
+                flex={1} 
+                variant="outline"
+                colorScheme="blue"
+                onClick={() => handleSave(false)}
+                isLoading={isSaving}
+              >
+                Save as Draft
+              </Button>
+              <Button 
+                flex={1} 
+                colorScheme="green"
+                onClick={() => handleSave(true)}
+                isLoading={isSaving}
+                leftIcon={<Icon as={FiPlus} />}
+              >
+                Save & Apply Now
+              </Button>
+            </>
+          ) : (
+            <Button 
+              flex={1} 
+              colorScheme="blue" 
+              onClick={() => handleSave(false)}
+              isLoading={isSaving}
+            >
+              Save Changes
+            </Button>
+          )}
+        </HStack>
+      </VStack>
     </Box>
   );
 }

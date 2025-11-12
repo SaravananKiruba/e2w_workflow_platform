@@ -45,6 +45,14 @@ model Tenant {
   integrations  Integration[]
   auditLogs     AuditLog[]
   
+  // Typed business entities (hybrid model)
+  leads         Lead[]
+  clients       Client[]
+  quotations    Quotation[]
+  orders        Order[]
+  invoices      Invoice[]
+  payments      Payment[]
+  
   @@map("tenants")
 }
 
@@ -115,6 +123,14 @@ model ModuleConfiguration {
   layouts     String?  // JSON: UI layout configuration
   validations String?  // JSON: Validation rules
   
+  // Filter configuration (Week 1-2 enhancement)
+  filterConfig String?  // JSON: Filter configuration - searchable fields, filter types
+  searchableFields String? // JSON: Array of field names that support search
+  
+  // Hot updates configuration (Week 3 enhancement)
+  allowHotUpdates Boolean @default(false) // Enable instant field updates without versioning
+  lastFieldUpdate DateTime? // Track when fields were last updated
+  
   status      String   @default("draft") // draft, review, active, archived
   version     Int      @default(1)
   
@@ -125,6 +141,7 @@ model ModuleConfiguration {
   approvedAt  DateTime?
   
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  filterPresets FilterPreset[]
   
   @@unique([tenantId, moduleName, version])
   @@map("module_configurations")
@@ -150,9 +167,61 @@ model MetadataLibrary {
   @@map("metadata_library")
 }
 
+// Week 1-2: Filter Preset System
+model FilterPreset {
+  id              String   @id @default(cuid())
+  tenantId        String
+  moduleId        String
+  name            String
+  userId          String   // User who created it
+  filters         String   // JSON: Filter configuration
+  isPublic        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  module          ModuleConfiguration @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId, moduleId])
+  @@map("filter_presets")
+}
+
+// Week 4: Configurable Sidebar System
+model SidebarConfiguration {
+  id              String   @id @default(cuid())
+  tenantId        String
+  role            String   // USER, TENANT_ADMIN, PLATFORM_ADMIN
+  items           String   // JSON: Sidebar items array
+  order           Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([tenantId, role])
+  @@map("sidebar_configurations")
+}
+
 // ==========================================
 // WORKFLOW ENGINE MODELS
 // ==========================================
+
+// Week 5-6: Workflow Template System
+model WorkflowTemplate {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  category        String   // Approval, Notification, Automation
+  isPublic        Boolean  @default(false) // Platform-wide or tenant-specific
+  templateData    String   // JSON: Workflow definition
+  createdBy       String   // User/Platform
+  tenantId        String?  // Null for platform templates
+  version         String   @default("1.0.0")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenantId])
+  @@index([category])
+  @@map("workflow_templates")
+}
 
 model Workflow {
   id          String   @id @default(cuid())
@@ -168,6 +237,9 @@ model Workflow {
   
   isActive    Boolean  @default(true)
   priority    Int      @default(0)
+  
+  // Week 5-6: Template support
+  templateId  String?  // If created from template
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -254,14 +326,316 @@ model AuditLog {
 }
 
 // ==========================================
+// HYBRID DATA MODEL - TYPED CORE TABLES
+// Performance optimization: Core business entities with proper indexing
+// Custom fields still stored in customData JSON for flexibility
+// ==========================================
+
+model Lead {
+  id              String   @id @default(cuid())
+  tenantId        String
+  
+  // Core indexed fields (frequently queried)
+  name            String
+  email           String?
+  phone           String?
+  company         String?
+  source          String?  // Google Ads, Meta Ads, LinkedIn, Referral, etc.
+  status          String   @default("New") // New, Contacted, Qualified, Converted, Lost
+  priority        String?  // Low, Medium, High, Urgent
+  expectedValue   Float?
+  
+  // Custom/dynamic fields (JSON for flexibility)
+  customData      String?  // JSON: Additional custom fields
+  
+  // Metadata
+  recordStatus    String   @default("active")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       String?
+  updatedBy       String?
+  
+  // Relations
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Performance indexes
+  @@index([tenantId, status])
+  @@index([tenantId, email])
+  @@index([tenantId, phone])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status, createdAt])
+  @@map("leads")
+}
+
+model Client {
+  id              String   @id @default(cuid())
+  tenantId        String
+  
+  // Core indexed fields
+  clientName      String
+  email           String?
+  phone           String?
+  company         String?
+  gstin           String?
+  
+  // Address (structured)
+  addressLine1    String?
+  addressLine2    String?
+  city            String?
+  state           String?
+  pincode         String?
+  country         String?  @default("India")
+  
+  // Business fields
+  status          String   @default("active")
+  clientType      String?  // Individual, Business, Government, etc.
+  industry        String?
+  
+  // Custom/dynamic fields
+  customData      String?  // JSON: Additional custom fields
+  
+  // Metadata
+  recordStatus    String   @default("active")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       String?
+  updatedBy       String?
+  
+  // Relations
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  quotations      Quotation[]
+  orders          Order[]
+  invoices        Invoice[]
+  
+  // Performance indexes
+  @@index([tenantId, status])
+  @@index([tenantId, email])
+  @@index([tenantId, phone])
+  @@index([tenantId, clientName])
+  @@index([tenantId, gstin])
+  @@index([tenantId, createdAt])
+  @@map("clients")
+}
+
+model Quotation {
+  id                String   @id @default(cuid())
+  tenantId          String
+  
+  // Core fields with indexes
+  quotationNumber   String
+  clientId          String
+  clientName        String
+  clientGSTIN       String?
+  
+  // Financial fields (indexed for analytics)
+  quotationDate     DateTime
+  validUntil        DateTime?
+  subtotal          Float    @default(0)
+  taxAmount         Float    @default(0)
+  discountAmount    Float    @default(0)
+  totalAmount       Float    @default(0)
+  
+  // Status tracking
+  status            String   @default("Draft") // Draft, Sent, Accepted, Rejected, Expired
+  
+  // Line items and terms (still JSON for flexibility)
+  items             String   // JSON: Array of line items
+  terms             String?  // JSON: Terms and conditions
+  customData        String?  // JSON: Additional custom fields
+  
+  // Metadata
+  recordStatus      String   @default("active")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  createdBy         String?
+  updatedBy         String?
+  
+  // Relations
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client            Client   @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  orders            Order[]
+  invoices          Invoice[]
+  
+  // Performance indexes
+  @@unique([tenantId, quotationNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, clientId])
+  @@index([tenantId, quotationDate])
+  @@index([tenantId, status, quotationDate])
+  @@index([tenantId, totalAmount])
+  @@map("quotations")
+}
+
+model Order {
+  id              String   @id @default(cuid())
+  tenantId        String
+  
+  // Core fields
+  orderNumber     String
+  quotationId     String?
+  clientId        String
+  clientName      String
+  
+  // Dates
+  orderDate       DateTime
+  deliveryDate    DateTime?
+  
+  // Financial fields (indexed)
+  subtotal        Float    @default(0)
+  taxAmount       Float    @default(0)
+  discountAmount  Float    @default(0)
+  totalAmount     Float    @default(0)
+  
+  // Status
+  status          String   @default("Pending") // Pending, Processing, Completed, Cancelled
+  paymentStatus   String   @default("Unpaid") // Unpaid, Partial, Paid
+  
+  // Line items (JSON)
+  items           String   // JSON: Array of line items
+  customData      String?  // JSON: Additional custom fields
+  
+  // Metadata
+  recordStatus    String   @default("active")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       String?
+  updatedBy       String?
+  
+  // Relations
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client          Client    @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  quotation       Quotation? @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  invoices        Invoice[]
+  payments        Payment[]
+  
+  // Performance indexes
+  @@unique([tenantId, orderNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, clientId])
+  @@index([tenantId, orderDate])
+  @@index([tenantId, status, orderDate])
+  @@index([tenantId, paymentStatus])
+  @@index([tenantId, totalAmount])
+  @@map("orders")
+}
+
+model Invoice {
+  id              String   @id @default(cuid())
+  tenantId        String
+  
+  // Core fields
+  invoiceNumber   String
+  orderId         String?
+  quotationId     String?
+  clientId        String
+  clientName      String
+  clientGSTIN     String?
+  
+  // Dates
+  invoiceDate     DateTime
+  dueDate         DateTime?
+  
+  // Financial fields (critical for analytics)
+  subtotal        Float    @default(0)
+  taxAmount       Float    @default(0)
+  discountAmount  Float    @default(0)
+  totalAmount     Float    @default(0)
+  paidAmount      Float    @default(0)
+  balanceAmount   Float    @default(0)
+  
+  // Status
+  status          String   @default("Draft") // Draft, Sent, Paid, Overdue, Cancelled
+  paymentStatus   String   @default("Unpaid") // Unpaid, Partial, Paid
+  
+  // Line items (JSON)
+  items           String   // JSON: Array of line items
+  customData      String?  // JSON: Additional custom fields
+  
+  // Metadata
+  recordStatus    String   @default("active")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       String?
+  updatedBy       String?
+  
+  // Relations
+  tenant          Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client          Client     @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  order           Order?     @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  quotation       Quotation? @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  payments        Payment[]
+  
+  // Performance indexes (CRITICAL for analytics queries)
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, paymentStatus])
+  @@index([tenantId, clientId])
+  @@index([tenantId, invoiceDate])
+  @@index([tenantId, dueDate])
+  @@index([tenantId, status, invoiceDate])
+  @@index([tenantId, totalAmount])
+  @@index([tenantId, invoiceDate, totalAmount]) // Analytics: revenue by date
+  @@map("invoices")
+}
+
+model Payment {
+  id              String   @id @default(cuid())
+  tenantId        String
+  
+  // Core fields
+  paymentNumber   String
+  invoiceId       String?
+  orderId         String?
+  clientId        String?
+  clientName      String?
+  
+  // Payment details
+  paymentDate     DateTime
+  amount          Float
+  paymentMethod   String?  // Cash, Bank Transfer, Cheque, UPI, Card, etc.
+  transactionId   String?
+  
+  // Status
+  status          String   @default("Completed") // Pending, Completed, Failed, Refunded
+  
+  // Custom data
+  customData      String?  // JSON: Additional custom fields
+  notes           String?
+  
+  // Metadata
+  recordStatus    String   @default("active")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       String?
+  updatedBy       String?
+  
+  // Relations
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice         Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  order           Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  
+  // Performance indexes
+  @@unique([tenantId, paymentNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, orderId])
+  @@index([tenantId, paymentDate])
+  @@index([tenantId, paymentMethod])
+  @@index([tenantId, amount])
+  @@index([tenantId, paymentDate, amount]) // Analytics: cash flow
+  @@map("payments")
+}
+
+// ==========================================
 // DYNAMIC DATA MODELS (Generic Storage)
+// Used for: Custom modules, extensions, non-core entities
 // ==========================================
 
 model DynamicRecord {
   id          String   @id @default(cuid())
   tenantId    String
   
-  moduleName  String   // Leads, Clients, etc.
+  moduleName  String   // Custom modules, vendors, items, etc.
   data        String   // JSON: Actual field values
   
   status      String   @default("active")
@@ -299,5 +673,25 @@ model AutoNumberSequence {
   @@unique([tenantId, moduleName])
   @@index([tenantId])
   @@map("auto_number_sequences")
+}
+
+// ==========================================
+// CUSTOM FIELD EXTENSIONS (Week 7)
+// ==========================================
+
+model CustomFieldExtension {
+  id              String   @id @default(cuid())
+  tenantId        String
+  moduleId        String   // Core module ID (leads, clients, etc.)
+  fieldName       String
+  fieldType       String
+  fieldConfig     String   // JSON: Field configuration
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([tenantId, moduleId, fieldName])
+  @@index([tenantId, moduleId])
+  @@map("custom_field_extensions")
 }
 
