@@ -548,10 +548,10 @@ export class DynamicRecordService {
             tenantId,
             recordStatus: 'active',
             OR: [
-              { name: { contains: search, mode: 'insensitive' } },
-              { email: { contains: search, mode: 'insensitive' } },
-              { phone: { contains: search, mode: 'insensitive' } },
-              { company: { contains: search, mode: 'insensitive' } },
+              { name: { contains: search } },
+              { email: { contains: search } },
+              { phone: { contains: search } },
+              { company: { contains: search } },
             ]
           }
         });
@@ -562,9 +562,9 @@ export class DynamicRecordService {
             tenantId,
             recordStatus: 'active',
             OR: [
-              { clientName: { contains: search, mode: 'insensitive' } },
-              { email: { contains: search, mode: 'insensitive' } },
-              { phone: { contains: search, mode: 'insensitive' } },
+              { clientName: { contains: search } },
+              { email: { contains: search } },
+              { phone: { contains: search } },
             ]
           }
         });
