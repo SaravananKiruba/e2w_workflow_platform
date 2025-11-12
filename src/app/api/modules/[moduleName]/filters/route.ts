@@ -66,7 +66,7 @@ export async function POST(
     }
 
     // Check if user is tenant admin
-    if (tenantContext.role !== 'TENANT_ADMIN' && tenantContext.role !== 'PLATFORM_ADMIN') {
+    if (tenantContext.userRole !== 'TENANT_ADMIN' && tenantContext.userRole !== 'PLATFORM_ADMIN') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
