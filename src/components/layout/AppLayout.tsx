@@ -1,6 +1,6 @@
 'use client';
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import {
   Box,
   Flex,
@@ -23,6 +23,7 @@ import {
   Badge,
   Tooltip,
   useColorModeValue,
+  Spinner,
 } from '@chakra-ui/react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -48,7 +49,16 @@ import {
   FiTag,
   FiClipboard,
   FiTruck,
+  FiBriefcase,
 } from 'react-icons/fi';
+
+// Week 4: Icon mapping for dynamic sidebar
+const iconMap: Record<string, any> = {
+  FiHome, FiUsers, FiSettings, FiGrid, FiBox, FiFileText,
+  FiShoppingCart, FiDollarSign, FiCreditCard, FiTrendingUp,
+  FiLayers, FiGitBranch, FiCheckCircle, FiDatabase, FiSliders,
+  FiPackage, FiTag, FiClipboard, FiTruck, FiBriefcase,
+};
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -68,12 +78,44 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
 
+  // Week 4: Dynamic sidebar state
+  const [dynamicSidebarItems, setDynamicSidebarItems] = useState<NavItem[] | null>(null);
+  const [sidebarLoading, setSidebarLoading] = useState(true);
+
   const role = session?.user?.role;
   const isPlatformAdmin = role === 'platform_admin';
   const isTenantAdmin = role === 'admin';
   const isManager = role === 'manager';
   const isOwner = role === 'owner';
   const isStaff = role === 'staff';
+
+  // Week 4: Fetch dynamic sidebar configuration
+  useEffect(() => {
+    const fetchSidebarConfig = async () => {
+      try {
+        const response = await fetch(`/api/admin/sidebar?role=${role || 'staff'}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.items) {
+            // Map icon strings to actual icon components
+            const mappedItems = data.items.map((item: any) => ({
+              ...item,
+              icon: iconMap[item.icon] || FiGrid,
+            }));
+            setDynamicSidebarItems(mappedItems);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch sidebar config:', error);
+      } finally {
+        setSidebarLoading(false);
+      }
+    };
+
+    if (session?.user) {
+      fetchSidebarConfig();
+    }
+  }, [session, role]);
 
   // Core Business Modules - Available to Manager, Owner, and Staff (NOT Platform Admin or Tenant Admin)
   const coreModules: NavItem[] = [
@@ -174,6 +216,48 @@ export default function AppLayout({ children }: AppLayoutProps) {
         p={3} 
         overflowY="auto"
       >
+        {/* Week 4: Dynamic Sidebar Loading State */}
+        {sidebarLoading && (
+          <Box textAlign="center" py={4}>
+            <Spinner size="sm" color={isPlatformAdmin ? 'gray.400' : 'gray.500'} />
+          </Box>
+        )}
+
+        {/* Week 4: Dynamic Sidebar Items (if configured) */}
+        {!sidebarLoading && dynamicSidebarItems && dynamicSidebarItems.length > 0 && (
+          <>
+            {dynamicSidebarItems.map((item) => {
+              const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+              return (
+                <Button
+                  key={item.name}
+                  onClick={() => router.push(item.href)}
+                  variant={isActive ? 'solid' : 'ghost'}
+                  colorScheme={isActive ? (isPlatformAdmin ? 'orange' : isTenantAdmin ? 'purple' : 'blue') : 'gray'}
+                  justifyContent="flex-start"
+                  leftIcon={<Icon as={item.icon} />}
+                  size="md"
+                  fontWeight={isActive ? 'bold' : 'normal'}
+                  _hover={{ bg: isPlatformAdmin ? 'gray.700' : isTenantAdmin ? 'purple.50' : 'gray.100' }}
+                  color={isPlatformAdmin && !isActive ? 'gray.300' : undefined}
+                >
+                  <Text flex={1} textAlign="left" isTruncated>
+                    {item.name}
+                  </Text>
+                  {item.badge && (
+                    <Badge colorScheme="red" ml={2}>
+                      {item.badge}
+                    </Badge>
+                  )}
+                </Button>
+              );
+            })}
+          </>
+        )}
+
+        {/* Fallback: Default hardcoded sidebar (if no dynamic config) */}
+        {!sidebarLoading && (!dynamicSidebarItems || dynamicSidebarItems.length === 0) && (
+          <>
         {/* Platform Admin Section */}
         {isPlatformAdmin && (
           <>
@@ -305,6 +389,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 </Button>
               );
             })}
+          </>
+        )}
           </>
         )}
       </VStack>

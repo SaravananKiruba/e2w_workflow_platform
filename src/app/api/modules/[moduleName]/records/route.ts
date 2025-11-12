@@ -16,23 +16,38 @@ export async function GET(
   try {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search');
+    const filters = searchParams.get('filters');
+    const sortBy = searchParams.get('sortBy') || undefined;
+    const sortOrder = (searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc';
+    const page = parseInt(searchParams.get('page') || '1');
+    const pageSize = parseInt(searchParams.get('pageSize') || '50');
 
-    let records;
-    if (search) {
-      records = await DynamicRecordService.searchRecords(
+    // Week 1-2: Use advanced filtering
+    if (filters || search) {
+      const parsedFilters = filters ? JSON.parse(filters) : [];
+      const result = await DynamicRecordService.getRecordsWithFilters(
         context.tenantId,
         params.moduleName,
-        search,
-        ['name', 'email', 'phone'] // Default search fields
+        {
+          filters: parsedFilters,
+          search: search || undefined,
+          searchFields: ['name', 'email', 'phone', 'company', 'description'],
+          sortBy,
+          sortOrder,
+          page,
+          pageSize,
+        }
       );
-    } else {
-      records = await DynamicRecordService.getRecords(
-        context.tenantId,
-        params.moduleName
-      );
+      return NextResponse.json(result);
     }
 
-    return NextResponse.json({ records });
+    // Legacy support: simple list
+    const records = await DynamicRecordService.getRecords(
+      context.tenantId,
+      params.moduleName
+    );
+
+    return NextResponse.json({ records, pagination: { total: records.length } });
   } catch (error) {
     console.error('Error fetching records:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

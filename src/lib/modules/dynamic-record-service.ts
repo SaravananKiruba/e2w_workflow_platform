@@ -160,4 +160,148 @@ export class DynamicRecordService {
       });
     });
   }
+
+  // Week 1-2: Advanced filter processing
+  static async getRecordsWithFilters(
+    tenantId: string,
+    moduleName: string,
+    options?: {
+      filters?: any[];
+      search?: string;
+      searchFields?: string[];
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+      page?: number;
+      pageSize?: number;
+    }
+  ) {
+    const { filters = [], search, searchFields = [], sortBy, sortOrder = 'desc', page = 1, pageSize = 50 } = options || {};
+
+    // Get all records first
+    let records = await this.getRecords(tenantId, moduleName);
+
+    // Apply search filter
+    if (search && searchFields.length > 0) {
+      records = records.filter(record => {
+        return searchFields.some(field => {
+          const value = record[field];
+          if (!value) return false;
+          return String(value).toLowerCase().includes(search.toLowerCase());
+        });
+      });
+    }
+
+    // Apply advanced filters
+    if (filters.length > 0) {
+      records = records.filter(record => {
+        return this.applyFilters(record, filters);
+      });
+    }
+
+    // Apply sorting
+    if (sortBy) {
+      records.sort((a, b) => {
+        const aVal = a[sortBy];
+        const bVal = b[sortBy];
+        
+        if (aVal === undefined || bVal === undefined) return 0;
+        
+        const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+        return sortOrder === 'asc' ? comparison : -comparison;
+      });
+    }
+
+    // Calculate pagination
+    const total = records.length;
+    const totalPages = Math.ceil(total / pageSize);
+    const start = (page - 1) * pageSize;
+    const paginatedRecords = records.slice(start, start + pageSize);
+
+    return {
+      data: paginatedRecords,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages,
+      },
+    };
+  }
+
+  // Build filter query logic
+  private static applyFilters(record: any, filters: any[]): boolean {
+    return filters.every(filter => {
+      const { field, operator, value, logicOperator = 'AND' } = filter;
+      const recordValue = record[field];
+
+      switch (operator) {
+        case 'equals':
+          return recordValue === value;
+        
+        case 'notEquals':
+          return recordValue !== value;
+        
+        case 'contains':
+          return recordValue && String(recordValue).toLowerCase().includes(String(value).toLowerCase());
+        
+        case 'notContains':
+          return !recordValue || !String(recordValue).toLowerCase().includes(String(value).toLowerCase());
+        
+        case 'startsWith':
+          return recordValue && String(recordValue).toLowerCase().startsWith(String(value).toLowerCase());
+        
+        case 'endsWith':
+          return recordValue && String(recordValue).toLowerCase().endsWith(String(value).toLowerCase());
+        
+        case 'greaterThan':
+          return Number(recordValue) > Number(value);
+        
+        case 'greaterThanOrEqual':
+          return Number(recordValue) >= Number(value);
+        
+        case 'lessThan':
+          return Number(recordValue) < Number(value);
+        
+        case 'lessThanOrEqual':
+          return Number(recordValue) <= Number(value);
+        
+        case 'between':
+          const [min, max] = value;
+          return Number(recordValue) >= Number(min) && Number(recordValue) <= Number(max);
+        
+        case 'in':
+          return Array.isArray(value) && value.includes(recordValue);
+        
+        case 'notIn':
+          return Array.isArray(value) && !value.includes(recordValue);
+        
+        case 'isNull':
+          return recordValue === null || recordValue === undefined;
+        
+        case 'isNotNull':
+          return recordValue !== null && recordValue !== undefined;
+        
+        case 'isEmpty':
+          return !recordValue || String(recordValue).trim() === '';
+        
+        case 'isNotEmpty':
+          return recordValue && String(recordValue).trim() !== '';
+        
+        // Date filters
+        case 'dateBefore':
+          return new Date(recordValue) < new Date(value);
+        
+        case 'dateAfter':
+          return new Date(recordValue) > new Date(value);
+        
+        case 'dateBetween':
+          const [startDate, endDate] = value;
+          const recordDate = new Date(recordValue);
+          return recordDate >= new Date(startDate) && recordDate <= new Date(endDate);
+        
+        default:
+          return true;
+      }
+    });
+  }
 }
