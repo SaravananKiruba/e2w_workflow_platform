@@ -8,7 +8,10 @@ export async function middleware(request: NextRequest) {
   const publicPaths = ['/auth/signin', '/auth/signup', '/auth/error', '/api/auth'];
   const isPublicPath = publicPaths.some(path => request.nextUrl.pathname.startsWith(path));
 
-  if (isPublicPath) {
+  // Exclude /api/auth/change-password from public paths - it requires auth
+  const isProtectedAuthPath = request.nextUrl.pathname === '/api/auth/change-password';
+
+  if (isPublicPath && !isProtectedAuthPath) {
     return NextResponse.next();
   }
 

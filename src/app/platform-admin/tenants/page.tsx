@@ -48,6 +48,7 @@ import {
   FiToggleLeft,
   FiToggleRight,
   FiHardDrive,
+  FiKey,
 } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 
@@ -63,6 +64,10 @@ export default function TenantsPage() {
   const [loading, setLoading] = useState(true);
   const [totalStorageGB, setTotalStorageGB] = useState(0);
   const [adminCredentials, setAdminCredentials] = useState<any>(null);
+  const { isOpen: isResetOpen, onOpen: onResetOpen, onClose: onResetClose } = useDisclosure();
+  const [selectedTenantForReset, setSelectedTenantForReset] = useState<any>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState('');
+  const [resetResult, setResetResult] = useState<any>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isCredOpen, onOpen: onCredOpen, onClose: onCredClose } = useDisclosure();
   const toast = useToast();
@@ -88,6 +93,36 @@ export default function TenantsPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openResetModal = (tenant: any) => {
+    setSelectedTenantForReset(tenant);
+    setResetPasswordValue('');
+    setResetResult(null);
+    onResetOpen();
+  };
+
+  const handleResetPassword = async () => {
+    if (!selectedTenantForReset) return;
+    try {
+      const res = await fetch(`/api/admin/tenants/${selectedTenantForReset.id}/reset-admin-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ password: resetPasswordValue || undefined }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setResetResult(data);
+        toast({ title: 'Password reset', description: 'Tenant admin password has been reset. Copy the new password below.', status: 'success', duration: 4000 });
+        fetchTenants();
+      } else {
+        toast({ title: 'Reset failed', description: data.error || 'Failed to reset password', status: 'error', duration: 4000 });
+      }
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'An error occurred', status: 'error', duration: 4000 });
     }
   };
 
@@ -378,6 +413,13 @@ export default function TenantsPage() {
                           onClick={() => openEditModal(tenant)}
                         />
                         <IconButton
+                          aria-label="Reset tenant admin password"
+                          icon={<Icon as={FiKey} />}
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openResetModal(tenant)}
+                        />
+                        <IconButton
                           aria-label={tenant.status === 'active' ? 'Deactivate tenant' : 'Activate tenant'}
                           icon={<Icon as={tenant.status === 'active' ? FiToggleRight : FiToggleLeft} />}
                           size="sm"
@@ -541,6 +583,49 @@ export default function TenantsPage() {
             <Button colorScheme="blue" onClick={onCredClose}>
               I've Saved the Credentials
             </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Reset Tenant Admin Password Modal */}
+      <Modal isOpen={isResetOpen} onClose={onResetClose} size="md">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Reset Tenant Admin Password</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack spacing={4} align="stretch">
+              <Text fontSize="sm" color="gray.600">
+                You are resetting the tenant admin password for <strong>{selectedTenantForReset?.name}</strong>.
+              </Text>
+
+              <FormControl>
+                <FormLabel>New Password (leave blank to auto-generate)</FormLabel>
+                <Input
+                  value={resetPasswordValue}
+                  onChange={(e) => setResetPasswordValue(e.target.value)}
+                  placeholder="Enter a new password or leave empty"
+                />
+              </FormControl>
+
+              {resetResult && (
+                <Box bg="gray.50" p={3} borderRadius="md" border="1px" borderColor="gray.200">
+                  <Text fontSize="sm" fontWeight="bold">New Credentials</Text>
+                  <HStack mt={2} spacing={3}>
+                    <Code>{resetResult.email}</Code>
+                    <Code colorScheme="green">{resetResult.password}</Code>
+                    <Button size="sm" onClick={() => { navigator.clipboard.writeText(resetResult.password || ''); toast({ title: 'Password copied', status: 'success' }); }}>Copy</Button>
+                  </HStack>
+                </Box>
+              )}
+            </VStack>
+          </ModalBody>
+
+          <ModalFooter>
+            <HStack spacing={3}>
+              <Button variant="ghost" onClick={onResetClose}>Cancel</Button>
+              <Button colorScheme="orange" onClick={handleResetPassword}>Reset Password</Button>
+            </HStack>
           </ModalFooter>
         </ModalContent>
       </Modal>
