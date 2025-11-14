@@ -65,6 +65,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
 
   const [tenantName, setTenantName] = useState<string>('');
+  const [customModules, setCustomModules] = useState<NavItem[]>([]);
+  const [loadingModules, setLoadingModules] = useState(true);
 
   const role = session?.user?.role;
   const isPlatformAdmin = role === 'platform_admin';
@@ -91,6 +93,50 @@ export default function AppLayout({ children }: AppLayoutProps) {
     }
   }, [isTenantAdmin, isPlatformAdmin]);
 
+  // Fetch custom modules for manager/owner/staff
+  useEffect(() => {
+    if (isManager || isOwner || isStaff) {
+      const fetchCustomModules = async () => {
+        try {
+          const res = await fetch('/api/tenant-admin/custom-modules');
+          if (res.ok) {
+            const data = await res.json();
+            const modules = data.modules || [];
+            
+            // Filter modules based on role permissions and convert to NavItem format
+            const roleModules = modules
+              .filter((mod: any) => {
+                // Check if module is visible in nav
+                if (!mod.showInNav) return false;
+                
+                // Check if user's role is allowed
+                const allowedRoles = mod.allowedRoles || [];
+                if (isManager && !allowedRoles.includes('manager')) return false;
+                if (isOwner && !allowedRoles.includes('owner')) return false;
+                if (isStaff && !allowedRoles.includes('staff')) return false;
+                
+                return true;
+              })
+              .map((mod: any) => ({
+                name: mod.displayName,
+                icon: FiGrid, // Default icon, can be mapped later
+                href: `/modules/${mod.moduleName}`,
+              }));
+            
+            setCustomModules(roleModules);
+          }
+        } catch (error) {
+          console.error('Failed to fetch custom modules:', error);
+        } finally {
+          setLoadingModules(false);
+        }
+      };
+      fetchCustomModules();
+    } else {
+      setLoadingModules(false);
+    }
+  }, [isManager, isOwner, isStaff]);
+
   // ========================================
   // PLATFORM CONFIGURATION MODULES
   // For Platform Admin & Tenant Admin ONLY
@@ -105,7 +151,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const tenantAdminModules: NavItem[] = [
     { name: 'Dashboard', icon: FiHome, href: '/tenant-admin' },
     { name: 'Users', icon: FiUsers, href: '/tenant-admin/users' },
-    { name: 'Modules', icon: FiGrid, href: '/tenant-admin/field-builder' },
+    { name: 'Module Builder', icon: FiGrid, href: '/tenant-admin/modules' },
     { name: 'Fields', icon: FiLayers, href: '/tenant-admin/field-builder' },
     { name: 'Workflows', icon: FiGitBranch, href: '/tenant-admin/workflow-builder' },
     { name: 'Settings', icon: FiSettings, href: '/tenant-admin/settings' },
@@ -356,6 +402,35 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     </Button>
                   );
                 })}
+
+                {/* CUSTOM MODULES - Dynamically loaded */}
+                {customModules.length > 0 && (
+                  <>
+                    <Text fontSize="xs" fontWeight="bold" color="purple.600" px={3} pt={4} pb={1}>
+                      🎯 CUSTOM MODULES
+                    </Text>
+                    {customModules.map((item) => {
+                      const isActive = pathname === item.href;
+                      return (
+                        <Button
+                          key={item.name}
+                          onClick={() => router.push(item.href)}
+                          variant={isActive ? 'solid' : 'ghost'}
+                          colorScheme={isActive ? 'purple' : 'gray'}
+                          justifyContent="flex-start"
+                          leftIcon={<Icon as={item.icon} />}
+                          size="md"
+                          fontWeight={isActive ? 'bold' : 'normal'}
+                          _hover={{ bg: 'purple.50' }}
+                        >
+                          <Text flex={1} textAlign="left" isTruncated>
+                            {item.name}
+                          </Text>
+                        </Button>
+                      );
+                    })}
+                  </>
+                )}
               </>
             )}
 
@@ -411,6 +486,35 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     </Button>
                   );
                 })}
+
+                {/* CUSTOM MODULES - Dynamically loaded */}
+                {customModules.length > 0 && (
+                  <>
+                    <Text fontSize="xs" fontWeight="bold" color="purple.600" px={3} pt={4} pb={1}>
+                      🎯 CUSTOM MODULES
+                    </Text>
+                    {customModules.map((item) => {
+                      const isActive = pathname === item.href;
+                      return (
+                        <Button
+                          key={item.name}
+                          onClick={() => router.push(item.href)}
+                          variant={isActive ? 'solid' : 'ghost'}
+                          colorScheme={isActive ? 'purple' : 'gray'}
+                          justifyContent="flex-start"
+                          leftIcon={<Icon as={item.icon} />}
+                          size="md"
+                          fontWeight={isActive ? 'bold' : 'normal'}
+                          _hover={{ bg: 'purple.50' }}
+                        >
+                          <Text flex={1} textAlign="left" isTruncated>
+                            {item.name}
+                          </Text>
+                        </Button>
+                      );
+                    })}
+                  </>
+                )}
               </>
             )}
       </VStack>
