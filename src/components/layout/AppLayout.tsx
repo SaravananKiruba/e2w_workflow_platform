@@ -424,8 +424,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </HStack>
           </MenuButton>
           <MenuList>
-            <MenuItem icon={<FiSettings />}>Profile Settings</MenuItem>
-            <MenuItem icon={<FiSettings />}>Preferences</MenuItem>
+            {isPlatformAdmin ? (
+              <MenuItem 
+                icon={<FiSettings />}
+                onClick={() => router.push('/platform-admin/change-password')}
+              >
+                Change Password
+              </MenuItem>
+            ) : (
+              <>
+                <MenuItem icon={<FiSettings />}>Profile Settings</MenuItem>
+                <MenuItem icon={<FiSettings />}>Preferences</MenuItem>
+              </>
+            )}
             <MenuDivider />
             <MenuItem icon={<FiLogOut />} onClick={handleLogout} color="red.500">
               Logout
