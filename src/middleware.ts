@@ -61,6 +61,10 @@ export async function middleware(request: NextRequest) {
     if (token.role === 'admin') {
       return NextResponse.redirect(new URL('/tenant-admin', request.url));
     }
+    // Redirect manager/owner/staff directly to Leads module (skip dashboard landing page)
+    if (['manager', 'owner', 'staff'].includes(token.role as string)) {
+      return NextResponse.redirect(new URL('/modules/Leads', request.url));
+    }
   }
 
   // Analytics/Finance Dashboard - ONLY manager and owner (NOT staff, NOT admins)
