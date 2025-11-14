@@ -23,7 +23,6 @@ import {
   Badge,
   Tooltip,
   useColorModeValue,
-  Spinner,
 } from '@chakra-ui/react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -34,7 +33,6 @@ import {
   FiSettings,
   FiLogOut,
   FiGrid,
-  FiBox,
   FiFileText,
   FiShoppingCart,
   FiDollarSign,
@@ -42,23 +40,11 @@ import {
   FiTrendingUp,
   FiLayers,
   FiGitBranch,
-  FiCheckCircle,
   FiDatabase,
-  FiSliders,
-  FiPackage,
   FiTag,
   FiClipboard,
   FiTruck,
-  FiBriefcase,
 } from 'react-icons/fi';
-
-// Week 4: Icon mapping for dynamic sidebar
-const iconMap: Record<string, any> = {
-  FiHome, FiUsers, FiSettings, FiGrid, FiBox, FiFileText,
-  FiShoppingCart, FiDollarSign, FiCreditCard, FiTrendingUp,
-  FiLayers, FiGitBranch, FiCheckCircle, FiDatabase, FiSliders,
-  FiPackage, FiTag, FiClipboard, FiTruck, FiBriefcase,
-};
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -78,9 +64,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Week 4: Dynamic sidebar state
-  const [dynamicSidebarItems, setDynamicSidebarItems] = useState<NavItem[] | null>(null);
-  const [sidebarLoading, setSidebarLoading] = useState(true);
   const [tenantName, setTenantName] = useState<string>('');
 
   const role = session?.user?.role;
@@ -108,36 +91,33 @@ export default function AppLayout({ children }: AppLayoutProps) {
     }
   }, [isTenantAdmin, isPlatformAdmin]);
 
-  // Week 4: Fetch dynamic sidebar configuration
-  useEffect(() => {
-    const fetchSidebarConfig = async () => {
-      try {
-        const response = await fetch(`/api/admin/sidebar?role=${role || 'staff'}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.items) {
-            // Map icon strings to actual icon components
-            const mappedItems = data.items.map((item: any) => ({
-              ...item,
-              icon: iconMap[item.icon] || FiGrid,
-            }));
-            setDynamicSidebarItems(mappedItems);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch sidebar config:', error);
-      } finally {
-        setSidebarLoading(false);
-      }
-    };
+  // ========================================
+  // PLATFORM CONFIGURATION MODULES
+  // For Platform Admin & Tenant Admin ONLY
+  // ========================================
+  
+  // Platform Admin Tools - ONLY for platform_admin (System-level tenant management)
+  const platformAdminModules: NavItem[] = [
+    { name: 'Tenants', icon: FiDatabase, href: '/platform-admin/tenants' },
+  ];
 
-    if (session?.user) {
-      fetchSidebarConfig();
-    }
-  }, [session, role]);
+  // Tenant Admin Configuration Tools - ONLY for Tenant Admin (Tenant-level configuration)
+  const tenantAdminModules: NavItem[] = [
+    { name: 'Dashboard', icon: FiHome, href: '/tenant-admin' },
+    { name: 'Users', icon: FiUsers, href: '/tenant-admin/users' },
+    { name: 'Modules', icon: FiGrid, href: '/tenant-admin/field-builder' },
+    { name: 'Fields', icon: FiLayers, href: '/tenant-admin/field-builder' },
+    { name: 'Workflows', icon: FiGitBranch, href: '/tenant-admin/workflow-builder' },
+    { name: 'Settings', icon: FiSettings, href: '/tenant-admin/settings' },
+  ];
 
-  // Core Business Modules - Available to Manager, Owner, and Staff (NOT Platform Admin or Tenant Admin)
-  const coreModules: NavItem[] = [
+  // ========================================
+  // APP/BUSINESS MODULES
+  // For Manager, Owner & Staff ONLY
+  // ========================================
+  
+  // Manager/Owner - Full business access + Analytics
+  const managerModules: NavItem[] = [
     { name: 'Dashboard', icon: FiHome, href: '/dashboard' },
     { name: 'Leads', icon: FiFileText, href: '/modules/Leads' },
     { name: 'Clients', icon: FiUsers, href: '/modules/Clients' },
@@ -145,30 +125,26 @@ export default function AppLayout({ children }: AppLayoutProps) {
     { name: 'Orders', icon: FiShoppingCart, href: '/modules/Orders' },
     { name: 'Invoices', icon: FiDollarSign, href: '/modules/Invoices' },
     { name: 'Payments', icon: FiCreditCard, href: '/modules/Payments' },
-    // Analytics only for Manager and Owner (NOT Staff)
-    { name: 'Analytics', icon: FiTrendingUp, href: '/dashboard/finance', roles: ['manager', 'owner'] },
+    { name: 'Analytics', icon: FiTrendingUp, href: '/dashboard/finance' },
+    { name: 'Vendors', icon: FiUsers, href: '/modules/Vendors' },
+    { name: 'Rate Catalogs', icon: FiTag, href: '/modules/RateCatalogs' },
+    { name: 'Purchase Requests', icon: FiClipboard, href: '/modules/PurchaseRequests' },
+    { name: 'Purchase Orders', icon: FiShoppingCart, href: '/modules/PurchaseOrders' },
+    { name: 'Goods Receipts', icon: FiTruck, href: '/modules/GoodsReceipts' },
+    { name: 'Vendor Bills', icon: FiFileText, href: '/modules/VendorBills' },
   ];
 
-  // Purchase & Vendor Management Modules
-  const purchaseModules: NavItem[] = [
-    { name: 'Vendors', icon: FiUsers, href: '/modules/Vendors', roles: ['manager', 'owner'] },
-    { name: 'Rate Catalogs', icon: FiTag, href: '/modules/RateCatalogs', roles: ['manager', 'owner'] },
-    { name: 'Purchase Requests', icon: FiClipboard, href: '/modules/PurchaseRequests' }, // All staff can create PRs
-    { name: 'Purchase Orders', icon: FiShoppingCart, href: '/modules/PurchaseOrders', roles: ['manager', 'owner'] },
-    { name: 'Goods Receipts', icon: FiTruck, href: '/modules/GoodsReceipts', roles: ['manager', 'owner', 'staff'] }, // Staff can receive goods
-    { name: 'Vendor Bills', icon: FiFileText, href: '/modules/VendorBills', roles: ['manager', 'owner'] },
-  ];
-
-  // Tenant Admin Tools - Only for Tenant Admin (admin role)
-  const tenantAdminTools: NavItem[] = [
-    { name: 'Users', icon: FiUsers, href: '/tenant-admin/users' },
-    { name: 'Field Builder', icon: FiLayers, href: '/tenant-admin/field-builder' },
-    { name: 'Workflow Builder', icon: FiGitBranch, href: '/tenant-admin/workflow-builder' },
-  ];
-
-  // Platform Admin Tools - Only for platform_admin (ONLY tenant management)
-  const platformAdminTools: NavItem[] = [
-    { name: 'Tenants', icon: FiDatabase, href: '/platform-admin/tenants' },
+  // Staff - Core workflow only (no Analytics, limited Purchase)
+  const staffModules: NavItem[] = [
+    { name: 'Dashboard', icon: FiHome, href: '/dashboard' },
+    { name: 'Leads', icon: FiFileText, href: '/modules/Leads' },
+    { name: 'Clients', icon: FiUsers, href: '/modules/Clients' },
+    { name: 'Quotations', icon: FiFileText, href: '/modules/Quotations' },
+    { name: 'Orders', icon: FiShoppingCart, href: '/modules/Orders' },
+    { name: 'Invoices', icon: FiDollarSign, href: '/modules/Invoices' },
+    { name: 'Payments', icon: FiCreditCard, href: '/modules/Payments' },
+    { name: 'Purchase Requests', icon: FiClipboard, href: '/modules/PurchaseRequests' },
+    { name: 'Goods Receipts', icon: FiTruck, href: '/modules/GoodsReceipts' },
   ];
 
   const handleLogout = async () => {
@@ -260,24 +236,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
         p={3} 
         overflowY="auto"
       >
-        {/* Week 4: Dynamic Sidebar Loading State */}
-        {sidebarLoading && (
-          <Box textAlign="center" py={4}>
-            <Spinner size="sm" color={isPlatformAdmin ? 'gray.400' : 'gray.500'} />
-          </Box>
-        )}
-
-        {/* Loading complete - render sidebar */}
-        {!sidebarLoading && (
-          <>
-            {/* Platform Admin Section - Always hardcoded for platform admin */}
-            {isPlatformAdmin && (
+        {/* ================================================
+            PLATFORM ADMIN - Platform Configuration
+            ================================================ */}
+        {isPlatformAdmin && (
               <>
                 <Text fontSize="xs" fontWeight="bold" color="gray.400" px={3} pt={2} pb={1}>
-                  PLATFORM ADMIN
+                  🏢 PLATFORM ADMIN
                 </Text>
-                {platformAdminTools.map((item) => {
-                  const isActive = pathname === item.href;
+                {platformAdminModules.map((item) => {
+                  const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                   return (
                     <Button
                       key={item.name}
@@ -305,13 +273,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </>
             )}
 
-            {/* Tenant Admin Section - Always hardcoded for tenant admin */}
+            {/* ================================================
+                TENANT ADMIN - Tenant Configuration
+                ================================================ */}
             {isTenantAdmin && (
               <>
                 <Text fontSize="xs" fontWeight="bold" color="purple.600" px={3} pt={2} pb={1}>
                   ⚙️ TENANT CONFIGURATION
                 </Text>
-                {tenantAdminTools.map((item) => {
+                {tenantAdminModules.map((item) => {
                   const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                   return (
                     <Button
@@ -334,21 +304,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </>
             )}
 
-            {/* Core Business Modules - Manager, Owner, Staff (NOT Platform Admin or Tenant Admin) */}
-            {!isPlatformAdmin && !isTenantAdmin && (
+            {/* ================================================
+                MANAGER/OWNER - Full Access
+                ================================================ */}
+            {(isManager || isOwner) && (
               <>
-                <Text fontSize="xs" fontWeight="bold" color="gray.500" px={3} pt={2} pb={1}>
+                <Text fontSize="xs" fontWeight="bold" color="blue.600" px={3} pt={2} pb={1}>
                   📊 SALES MODULES
                 </Text>
-                {coreModules.map((item) => {
-                  // Check if item has role restrictions
-                  if (item.roles && item.roles.length > 0) {
-                    // Skip if current user role is not in allowed roles
-                    if (!item.roles.includes(role || '')) {
-                      return null;
-                    }
-                  }
-                  
+                {managerModules.slice(0, 8).map((item) => {
                   const isActive = pathname === item.href;
                   return (
                     <Button
@@ -360,7 +324,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       leftIcon={<Icon as={item.icon} />}
                       size="md"
                       fontWeight={isActive ? 'bold' : 'normal'}
-                      _hover={{ bg: 'gray.100' }}
+                      _hover={{ bg: 'blue.50' }}
                     >
                       <Text flex={1} textAlign="left" isTruncated>
                         {item.name}
@@ -369,19 +333,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   );
                 })}
 
-                {/* Purchase & Vendor Management Section */}
                 <Text fontSize="xs" fontWeight="bold" color="green.600" px={3} pt={4} pb={1}>
                   🛒 PURCHASE MODULES
                 </Text>
-                {purchaseModules.map((item) => {
-                  // Check if item has role restrictions
-                  if (item.roles && item.roles.length > 0) {
-                    // Skip if current user role is not in allowed roles
-                    if (!item.roles.includes(role || '')) {
-                      return null;
-                    }
-                  }
-                  
+                {managerModules.slice(8).map((item) => {
                   const isActive = pathname === item.href;
                   return (
                     <Button
@@ -403,8 +358,61 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 })}
               </>
             )}
-          </>
-        )}
+
+            {/* ================================================
+                STAFF - Limited Access
+                ================================================ */}
+            {isStaff && (
+              <>
+                <Text fontSize="xs" fontWeight="bold" color="blue.600" px={3} pt={2} pb={1}>
+                  📊 SALES MODULES
+                </Text>
+                {staffModules.slice(0, 7).map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Button
+                      key={item.name}
+                      onClick={() => router.push(item.href)}
+                      variant={isActive ? 'solid' : 'ghost'}
+                      colorScheme={isActive ? 'blue' : 'gray'}
+                      justifyContent="flex-start"
+                      leftIcon={<Icon as={item.icon} />}
+                      size="md"
+                      fontWeight={isActive ? 'bold' : 'normal'}
+                      _hover={{ bg: 'blue.50' }}
+                    >
+                      <Text flex={1} textAlign="left" isTruncated>
+                        {item.name}
+                      </Text>
+                    </Button>
+                  );
+                })}
+
+                <Text fontSize="xs" fontWeight="bold" color="green.600" px={3} pt={4} pb={1}>
+                  🛒 PURCHASE MODULES
+                </Text>
+                {staffModules.slice(7).map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Button
+                      key={item.name}
+                      onClick={() => router.push(item.href)}
+                      variant={isActive ? 'solid' : 'ghost'}
+                      colorScheme={isActive ? 'green' : 'gray'}
+                      justifyContent="flex-start"
+                      leftIcon={<Icon as={item.icon} />}
+                      size="md"
+                      fontWeight={isActive ? 'bold' : 'normal'}
+                      _hover={{ bg: 'green.50' }}
+                    >
+                      <Text flex={1} textAlign="left" isTruncated>
+                        {item.name}
+                      </Text>
+                    </Button>
+                  );
+                })}
+              </>
+            )}
       </VStack>
 
       {/* User Profile Section */}

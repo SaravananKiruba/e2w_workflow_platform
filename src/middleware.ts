@@ -27,22 +27,44 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/unauthorized?reason=tenant_inactive', request.url));
   }
 
-  // Platform Admin route guard - ONLY platform_admin role
+  // ============================================================
+  // ROLE-BASED ACCESS CONTROL
+  // ============================================================
+  
+  // Platform Admin route guard - ONLY platform_admin role (System-level)
   if (request.nextUrl.pathname.startsWith('/platform-admin')) {
     if (token.role !== 'platform_admin') {
       return NextResponse.redirect(new URL('/unauthorized?reason=platform_admin_only', request.url));
     }
   }
 
-  // Tenant Admin route guard - ONLY admin role (configuration management)
+  // Tenant Admin route guard - ONLY admin role (Tenant configuration)
   if (request.nextUrl.pathname.startsWith('/tenant-admin')) {
     if (token.role !== 'admin') {
       return NextResponse.redirect(new URL('/unauthorized?reason=tenant_admin_only', request.url));
     }
   }
 
-  // Analytics/Finance Dashboard - ONLY manager and owner (NOT staff)
-  if (request.nextUrl.pathname.startsWith('/dashboard/finance')) {
+  // Business Module Access - Block Platform Admin and Tenant Admin
+  // Allow /dashboard for redirect purposes, but block actual business modules
+  if (request.nextUrl.pathname.startsWith('/modules/')) {
+    if (token.role === 'platform_admin' || token.role === 'admin') {
+      return NextResponse.redirect(new URL('/unauthorized?reason=business_role_required', request.url));
+    }
+  }
+  
+  // Redirect admins from /dashboard to their proper landing pages
+  if (request.nextUrl.pathname === '/dashboard') {
+    if (token.role === 'platform_admin') {
+      return NextResponse.redirect(new URL('/platform-admin/tenants', request.url));
+    }
+    if (token.role === 'admin') {
+      return NextResponse.redirect(new URL('/tenant-admin', request.url));
+    }
+  }
+
+  // Analytics/Finance Dashboard - ONLY manager and owner (NOT staff, NOT admins)
+  if (request.nextUrl.pathname.startsWith('/dashboard/finance') || request.nextUrl.pathname.startsWith('/dashboard/reports')) {
     if (!['manager', 'owner'].includes(token.role as string)) {
       return NextResponse.redirect(new URL('/unauthorized?reason=manager_only', request.url));
     }
