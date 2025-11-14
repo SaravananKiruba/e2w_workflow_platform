@@ -239,7 +239,7 @@ export default function TenantsPage() {
         </HStack>
 
         {/* Summary Stats */}
-        <SimpleGrid columns={{ base: 1, md: 4 }} spacing={4}>
+        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
           <Box bg="white" p={4} borderRadius="lg" border="1px" borderColor="gray.200">
             <Stat>
               <HStack>
@@ -261,19 +261,6 @@ export default function TenantsPage() {
                 {tenants.filter((t) => t.status === 'active').length}
               </StatNumber>
               <StatHelpText>Currently active</StatHelpText>
-            </Stat>
-          </Box>
-
-          <Box bg="white" p={4} borderRadius="lg" border="1px" borderColor="gray.200">
-            <Stat>
-              <HStack>
-                <Icon as={FiDatabase} boxSize={6} color="purple.500" />
-                <StatLabel>Total Records</StatLabel>
-              </HStack>
-              <StatNumber>
-                {tenants.reduce((sum, t) => sum + (t.recordCount || 0), 0).toLocaleString()}
-              </StatNumber>
-              <StatHelpText>Across all tenants</StatHelpText>
             </Stat>
           </Box>
 
