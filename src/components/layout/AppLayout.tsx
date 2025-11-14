@@ -81,6 +81,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Week 4: Dynamic sidebar state
   const [dynamicSidebarItems, setDynamicSidebarItems] = useState<NavItem[] | null>(null);
   const [sidebarLoading, setSidebarLoading] = useState(true);
+  const [tenantName, setTenantName] = useState<string>('');
 
   const role = session?.user?.role;
   const isPlatformAdmin = role === 'platform_admin';
@@ -88,6 +89,24 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const isManager = role === 'manager';
   const isOwner = role === 'owner';
   const isStaff = role === 'staff';
+
+  // Fetch tenant name for tenant admins
+  useEffect(() => {
+    if (isTenantAdmin && !isPlatformAdmin) {
+      const fetchTenantName = async () => {
+        try {
+          const res = await fetch('/api/tenant/info', { credentials: 'same-origin' });
+          if (res.ok) {
+            const data = await res.json();
+            setTenantName(data.name || '');
+          }
+        } catch (error) {
+          console.error('Failed to fetch tenant name:', error);
+        }
+      };
+      fetchTenantName();
+    }
+  }, [isTenantAdmin, isPlatformAdmin]);
 
   // Week 4: Fetch dynamic sidebar configuration
   useEffect(() => {
@@ -189,21 +208,48 @@ export default function AppLayout({ children }: AppLayoutProps) {
         borderColor={sidebarBorderColor}
         bg={isPlatformAdmin ? 'gray.900' : undefined}
       >
-        <HStack spacing={2}>
-          <Box fontSize="2xl">💼</Box>
-          <VStack align="start" spacing={0}>
-            <Text fontSize="lg" fontWeight="bold" color={logoColor}>
-              Easy2Work
+        {isPlatformAdmin ? (
+          <HStack spacing={2}>
+            <Box fontSize="2xl">💼</Box>
+            <VStack align="start" spacing={0}>
+              <Text fontSize="lg" fontWeight="bold" color={logoColor}>
+                Easy2Work
+              </Text>
+              <Badge 
+                colorScheme="orange" 
+                fontSize="xs"
+                variant="solid"
+              >
+                Platform
+              </Badge>
+            </VStack>
+          </HStack>
+        ) : isTenantAdmin ? (
+          <VStack align="start" spacing={2}>
+            <Text fontSize="sm" fontWeight="600" color="gray.500">
+              e2w platform
             </Text>
-            <Badge 
-              colorScheme={isPlatformAdmin ? 'orange' : isTenantAdmin ? 'purple' : isManager ? 'green' : 'blue'} 
-              fontSize="xs"
-              variant={isPlatformAdmin ? 'solid' : 'subtle'}
-            >
-              {isPlatformAdmin ? 'Platform' : isTenantAdmin ? 'Tenant Admin' : isManager ? 'Manager' : isOwner ? 'Owner' : 'User'}
-            </Badge>
+            <Text fontSize="md" fontWeight="bold" color="primary.600" isTruncated maxW="100%">
+              {tenantName}
+            </Text>
           </VStack>
-        </HStack>
+        ) : (
+          <HStack spacing={2}>
+            <Box fontSize="2xl">💼</Box>
+            <VStack align="start" spacing={0}>
+              <Text fontSize="lg" fontWeight="bold" color={logoColor}>
+                Easy2Work
+              </Text>
+              <Badge 
+                colorScheme={isManager ? 'green' : isOwner ? 'green' : 'blue'} 
+                fontSize="xs"
+                variant="subtle"
+              >
+                {isManager ? 'Manager' : isOwner ? 'Owner' : 'User'}
+              </Badge>
+            </VStack>
+          </HStack>
+        )}
       </Box>
 
       {/* Navigation Links */}
@@ -428,6 +474,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <MenuItem 
                 icon={<FiSettings />}
                 onClick={() => router.push('/platform-admin/change-password')}
+              >
+                Change Password
+              </MenuItem>
+            ) : isTenantAdmin ? (
+              <MenuItem 
+                icon={<FiSettings />}
+                onClick={() => router.push('/tenant-admin/change-password')}
               >
                 Change Password
               </MenuItem>

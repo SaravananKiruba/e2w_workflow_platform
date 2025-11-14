@@ -30,6 +30,7 @@ import {
   FormLabel,
   Input,
   Select,
+  Code,
 } from '@chakra-ui/react';
 import {
   FiPlus,
@@ -47,7 +48,9 @@ export default function UserManagementPage() {
     role: 'staff',
     status: 'active',
   });
+  const [userCredentials, setUserCredentials] = useState<any>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isCredOpen, onOpen: onCredOpen, onClose: onCredClose } = useDisclosure();
   const toast = useToast();
 
   useEffect(() => {
@@ -55,12 +58,28 @@ export default function UserManagementPage() {
   }, []);
 
   const fetchUsers = async () => {
-    // TODO: Fetch users from API
-    setUsers([
-      { id: '1', name: 'John Doe', email: 'john@demo.com', role: 'admin', status: 'active', createdAt: new Date() },
-      { id: '2', name: 'Jane Smith', email: 'jane@demo.com', role: 'manager', status: 'active', createdAt: new Date() },
-      { id: '3', name: 'Bob Wilson', email: 'bob@demo.com', role: 'staff', status: 'active', createdAt: new Date() },
-    ]);
+    try {
+      const res = await fetch('/api/tenant/users', {
+        credentials: 'same-origin',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data.users || []);
+      } else {
+        toast({
+          title: 'Error loading users',
+          status: 'error',
+          duration: 3000,
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error loading users',
+        description: error.message,
+        status: 'error',
+        duration: 3000,
+      });
+    }
   };
 
   const openCreateModal = () => {
@@ -86,25 +105,107 @@ export default function UserManagementPage() {
   };
 
   const handleSubmit = async () => {
-    // TODO: API call to create/update user
-    toast({
-      title: selectedUser ? 'User updated' : 'User created',
-      status: 'success',
-      duration: 3000,
-    });
-    onClose();
-    fetchUsers();
+    if (!formData.name || !formData.email) {
+      toast({
+        title: 'Please fill in all fields',
+        status: 'warning',
+        duration: 3000,
+      });
+      return;
+    }
+
+    try {
+      const method = selectedUser ? 'PUT' : 'POST';
+      const url = selectedUser
+        ? `/api/tenant/users/${selectedUser.id}`
+        : '/api/tenant/users';
+
+      const body = {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+      };
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(body),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        
+        if (!selectedUser) {
+          // For new users, show credentials modal
+          setUserCredentials({
+            email: formData.email,
+            password: data.generatedPassword,
+          });
+          onCredOpen();
+        } else {
+          toast({
+            title: 'User updated',
+            status: 'success',
+            duration: 3000,
+          });
+        }
+        
+        onClose();
+        fetchUsers();
+      } else {
+        const error = await res.json();
+        toast({
+          title: 'Error',
+          description: error.error || 'Failed to save user',
+          status: 'error',
+          duration: 3000,
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        status: 'error',
+        duration: 3000,
+      });
+    }
   };
 
   const handleToggleStatus = async (userId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-    // TODO: API call to toggle status
-    toast({
-      title: `User ${newStatus === 'active' ? 'activated' : 'deactivated'}`,
-      status: 'success',
-      duration: 3000,
-    });
-    fetchUsers();
+    try {
+      const res = await fetch(`/api/tenant/users/${userId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (res.ok) {
+        toast({
+          title: `User ${newStatus === 'active' ? 'activated' : 'deactivated'}`,
+          status: 'success',
+          duration: 3000,
+        });
+        fetchUsers();
+      } else {
+        const error = await res.json();
+        toast({
+          title: 'Error',
+          description: error.error || 'Failed to update status',
+          status: 'error',
+          duration: 3000,
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        status: 'error',
+        duration: 3000,
+      });
+    }
   };
 
   const getRoleColor = (role: string) => {
@@ -268,6 +369,77 @@ export default function UserManagementPage() {
                 {selectedUser ? 'Update' : 'Create'}
               </Button>
             </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* User Credentials Modal */}
+      <Modal isOpen={isCredOpen} onClose={onCredClose} size="lg">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>User Created Successfully! 🎉</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack spacing={4} align="stretch">
+              <Text fontWeight="bold" color="green.600">
+                ✅ User account has been created
+              </Text>
+              <Text fontSize="sm" color="gray.600">
+                Share these credentials with the user so they can login to their account.
+              </Text>
+              
+              <Box bg="gray.50" p={4} borderRadius="md" border="1px" borderColor="gray.200">
+                <VStack align="stretch" spacing={3}>
+                  <Box>
+                    <Text fontSize="sm" fontWeight="bold" color="gray.600">Email:</Text>
+                    <HStack>
+                      <Code fontSize="md" colorScheme="blue" p={2} flex={1}>
+                        {userCredentials?.email}
+                      </Code>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(userCredentials?.email || '');
+                          toast({ title: 'Email copied!', status: 'success', duration: 2000 });
+                        }}
+                      >
+                        Copy
+                      </Button>
+                    </HStack>
+                  </Box>
+                  
+                  <Box>
+                    <Text fontSize="sm" fontWeight="bold" color="gray.600">Password:</Text>
+                    <HStack>
+                      <Code fontSize="md" colorScheme="green" p={2} flex={1}>
+                        {userCredentials?.password}
+                      </Code>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(userCredentials?.password || '');
+                          toast({ title: 'Password copied!', status: 'success', duration: 2000 });
+                        }}
+                      >
+                        Copy
+                      </Button>
+                    </HStack>
+                  </Box>
+                </VStack>
+              </Box>
+
+              <Box bg="blue.50" p={3} borderRadius="md">
+                <Text fontSize="sm" color="blue.800">
+                  💡 User can change their password after the first login.
+                </Text>
+              </Box>
+            </VStack>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button colorScheme="purple" onClick={onCredClose}>
+              I've Saved the Credentials
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

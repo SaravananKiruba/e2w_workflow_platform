@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 
-export async function POST(req: NextRequest) {
+async function handleChangePassword(req: NextRequest) {
   try {
     // Get user info from request headers (set by middleware)
     const userId = req.headers.get('x-user-id');
@@ -32,9 +32,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (newPassword.length < 8) {
+    if (newPassword.length < 6) {
       return NextResponse.json(
-        { error: 'New password must be at least 8 characters' },
+        { error: 'New password must be at least 6 characters' },
         { status: 400 }
       );
     }
@@ -96,4 +96,12 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+export async function POST(req: NextRequest) {
+  return handleChangePassword(req);
+}
+
+export async function PATCH(req: NextRequest) {
+  return handleChangePassword(req);
 }

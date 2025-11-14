@@ -55,6 +55,12 @@ import { useRouter } from 'next/navigation';
 export default function TenantsPage() {
   const [tenants, setTenants] = useState<any[]>([]);
   const [selectedTenant, setSelectedTenant] = useState<any>(null);
+  const [filteredTenants, setFilteredTenants] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterTier, setFilterTier] = useState('all');
+  const [sortBy, setSortBy] = useState('created'); // created, name, users, records, storage
+  const [sortOrder, setSortOrder] = useState('desc'); // asc, desc
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -77,6 +83,51 @@ export default function TenantsPage() {
     fetchTenants();
     fetchStorageData();
   }, []);
+
+  useEffect(() => {
+    // Apply filters and sorting
+    let filtered = tenants.filter((tenant) => {
+      const matchSearch =
+        tenant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        tenant.slug.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchStatus = filterStatus === 'all' || tenant.status === filterStatus;
+      const matchTier = filterTier === 'all' || tenant.subscriptionTier === filterTier;
+      return matchSearch && matchStatus && matchTier;
+    });
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aVal, bVal;
+      switch (sortBy) {
+        case 'name':
+          aVal = a.name.toLowerCase();
+          bVal = b.name.toLowerCase();
+          break;
+        case 'users':
+          aVal = a._count?.users || 0;
+          bVal = b._count?.users || 0;
+          break;
+        case 'records':
+          aVal = a.recordCount || 0;
+          bVal = b.recordCount || 0;
+          break;
+        case 'storage':
+          aVal = a.storageUsedMB || 0;
+          bVal = b.storageUsedMB || 0;
+          break;
+        case 'created':
+        default:
+          aVal = new Date(a.createdAt).getTime();
+          bVal = new Date(b.createdAt).getTime();
+      }
+
+      if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    setFilteredTenants(filtered);
+  }, [tenants, searchTerm, filterStatus, filterTier, sortBy, sortOrder]);
 
   const fetchTenants = async () => {
     setLoading(true);
@@ -105,12 +156,34 @@ export default function TenantsPage() {
 
   const handleResetPassword = async () => {
     if (!selectedTenantForReset) return;
+
+    // Validate password
+    if (!resetPasswordValue) {
+      toast({
+        title: 'Password required',
+        description: 'Please enter a new password',
+        status: 'warning',
+        duration: 3000,
+      });
+      return;
+    }
+
+    if (resetPasswordValue.length < 6) {
+      toast({
+        title: 'Password too short',
+        description: 'Password must be at least 6 characters',
+        status: 'warning',
+        duration: 3000,
+      });
+      return;
+    }
+
     try {
       const res = await fetch(`/api/admin/tenants/${selectedTenantForReset.id}/reset-admin-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
-        body: JSON.stringify({ password: resetPasswordValue || undefined }),
+        body: JSON.stringify({ password: resetPasswordValue }),
       });
 
       const data = await res.json();
@@ -339,11 +412,149 @@ export default function TenantsPage() {
           </Box>
         </SimpleGrid>
 
+        {/* Filters and Sort Controls */}
+        <Box bg="white" p={6} borderRadius="lg" border="1px" borderColor="gray.200" boxShadow="sm">
+          <VStack spacing={5} align="stretch">
+            {/* Title and Result Count */}
+            <HStack justify="space-between" align="center">
+              <VStack align="start" spacing={1}>
+                <Heading size="sm">Filter & Search</Heading>
+                <Text fontSize="xs" color="gray.500">
+                  Showing <strong>{filteredTenants.length}</strong> of <strong>{tenants.length}</strong> tenants
+                </Text>
+              </VStack>
+              <Button
+                size="sm"
+                variant="ghost"
+                colorScheme="gray"
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterStatus('all');
+                  setFilterTier('all');
+                  setSortBy('created');
+                  setSortOrder('desc');
+                }}
+              >
+                Clear All
+              </Button>
+            </HStack>
+
+            {/* First Row - Search */}
+            <FormControl>
+              <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                🔍 Search Tenants
+              </FormLabel>
+              <Input
+                placeholder="Search by tenant name or slug..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                size="md"
+                borderColor="gray.300"
+                _focus={{ borderColor: 'blue.500', boxShadow: '0 0 0 1px rgba(66, 153, 225, 0.5)' }}
+              />
+            </FormControl>
+
+            {/* Filter Row 1 - Status and Tier */}
+            <HStack spacing={4} align="flex-end">
+              <FormControl minW="180px">
+                <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                  📊 Status
+                </FormLabel>
+                <Select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  size="md"
+                  borderColor="gray.300"
+                  _focus={{ borderColor: 'blue.500' }}
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">✅ Active</option>
+                  <option value="suspended">⏸️ Suspended</option>
+                  <option value="inactive">❌ Inactive</option>
+                </Select>
+              </FormControl>
+
+              <FormControl minW="180px">
+                <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                  💎 Tier
+                </FormLabel>
+                <Select
+                  value={filterTier}
+                  onChange={(e) => setFilterTier(e.target.value)}
+                  size="md"
+                  borderColor="gray.300"
+                  _focus={{ borderColor: 'blue.500' }}
+                >
+                  <option value="all">All Tiers</option>
+                  <option value="free">🆓 Free</option>
+                  <option value="basic">📦 Basic</option>
+                  <option value="professional">⭐ Professional</option>
+                  <option value="enterprise">🚀 Enterprise</option>
+                </Select>
+              </FormControl>
+            </HStack>
+
+            {/* Filter Row 2 - Sort Options */}
+            <HStack spacing={4} align="flex-end">
+              <FormControl minW="200px">
+                <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                  ⬆️ Sort By
+                </FormLabel>
+                <Select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  size="md"
+                  borderColor="gray.300"
+                  _focus={{ borderColor: 'blue.500' }}
+                >
+                  <option value="created">Created Date</option>
+                  <option value="name">Tenant Name</option>
+                  <option value="users">Users Count</option>
+                  <option value="records">Records Count</option>
+                  <option value="storage">Storage Used</option>
+                </Select>
+              </FormControl>
+
+              <FormControl minW="150px">
+                <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                  Order
+                </FormLabel>
+                <HStack spacing={2}>
+                  <Button
+                    size="md"
+                    variant={sortOrder === 'desc' ? 'solid' : 'outline'}
+                    colorScheme={sortOrder === 'desc' ? 'blue' : 'gray'}
+                    onClick={() => setSortOrder('desc')}
+                    flex={1}
+                    fontSize="sm"
+                  >
+                    ↓ Descending
+                  </Button>
+                  <Button
+                    size="md"
+                    variant={sortOrder === 'asc' ? 'solid' : 'outline'}
+                    colorScheme={sortOrder === 'asc' ? 'blue' : 'gray'}
+                    onClick={() => setSortOrder('asc')}
+                    flex={1}
+                    fontSize="sm"
+                  >
+                    ↑ Ascending
+                  </Button>
+                </HStack>
+              </FormControl>
+            </HStack>
+          </VStack>
+        </Box>
+
         {/* Tenants Table */}
         <Box bg="white" borderRadius="lg" border="1px" borderColor="gray.200" overflow="hidden">
           {loading ? (
             <Box p={8} textAlign="center">
               <Text>Loading...</Text>
+            </Box>
+          ) : filteredTenants.length === 0 ? (
+            <Box p={8} textAlign="center">
+              <Text color="gray.500">No tenants found matching your filters</Text>
             </Box>
           ) : (
             <Table variant="simple">
@@ -362,7 +573,7 @@ export default function TenantsPage() {
                 </Tr>
               </Thead>
               <Tbody>
-                {tenants.map((tenant) => (
+                {filteredTenants.map((tenant) => (
                   <Tr key={tenant.id}>
                     <Td fontWeight="bold">{tenant.name}</Td>
                     <Td>
@@ -599,13 +810,17 @@ export default function TenantsPage() {
                 You are resetting the tenant admin password for <strong>{selectedTenantForReset?.name}</strong>.
               </Text>
 
-              <FormControl>
-                <FormLabel>New Password (leave blank to auto-generate)</FormLabel>
+              <FormControl isRequired>
+                <FormLabel>New Password</FormLabel>
                 <Input
+                  type="password"
                   value={resetPasswordValue}
                   onChange={(e) => setResetPasswordValue(e.target.value)}
-                  placeholder="Enter a new password or leave empty"
+                  placeholder="Enter a new password (min 6 characters)"
                 />
+                <Text fontSize="xs" color="gray.600" mt={1}>
+                  Share this password with the tenant admin for their new login.
+                </Text>
               </FormControl>
 
               {resetResult && (

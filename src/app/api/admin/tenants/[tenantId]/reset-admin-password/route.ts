@@ -29,12 +29,22 @@ export async function POST(req: NextRequest, { params }: { params: { tenantId: s
     }
 
     const body = await req.json();
-    let newPassword = body?.password;
+    const newPassword = body?.password;
 
-    // If no password provided, generate a random one
+    // Password is required
     if (!newPassword) {
-      const crypto = await import('crypto');
-      newPassword = crypto.randomBytes(8).toString('hex');
+      return NextResponse.json(
+        { error: 'Password is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate password length
+    if (newPassword.length < 6) {
+      return NextResponse.json(
+        { error: 'Password must be at least 6 characters' },
+        { status: 400 }
+      );
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -45,7 +55,7 @@ export async function POST(req: NextRequest, { params }: { params: { tenantId: s
     });
 
     return NextResponse.json({
-      message: 'Tenant admin password reset',
+      message: 'Tenant admin password reset successfully',
       email: adminUser.email,
       password: newPassword,
     });
