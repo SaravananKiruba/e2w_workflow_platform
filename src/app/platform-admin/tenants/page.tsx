@@ -61,12 +61,14 @@ export default function TenantsPage() {
     status: 'active',
   });
   const [loading, setLoading] = useState(true);
+  const [totalStorageGB, setTotalStorageGB] = useState(0);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
   const router = useRouter();
 
   useEffect(() => {
     fetchTenants();
+    fetchStorageData();
   }, []);
 
   const fetchTenants = async () => {
@@ -84,6 +86,18 @@ export default function TenantsPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStorageData = async () => {
+    try {
+      const res = await fetch('/api/admin/platform/storage');
+      if (res.ok) {
+        const data = await res.json();
+        setTotalStorageGB(data.totalStorageGB);
+      }
+    } catch (error) {
+      console.error('Error fetching storage data:', error);
     }
   };
 
@@ -130,6 +144,7 @@ export default function TenantsPage() {
           duration: 3000,
         });
         fetchTenants();
+        fetchStorageData();
         onClose();
       } else {
         const error = await res.json();
@@ -182,6 +197,7 @@ export default function TenantsPage() {
           duration: 3000,
         });
         fetchTenants();
+        fetchStorageData();
       } else {
         const error = await res.json();
         toast({
@@ -271,7 +287,7 @@ export default function TenantsPage() {
                 <StatLabel>Total Storage</StatLabel>
               </HStack>
               <StatNumber>
-                {(tenants.reduce((sum, t) => sum + (t.storageUsedMB || 0), 0) / 1024).toFixed(2)} GB
+                {totalStorageGB.toFixed(2)} GB
               </StatNumber>
               <StatHelpText>Storage consumed</StatHelpText>
             </Stat>
