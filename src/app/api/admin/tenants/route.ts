@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { name, slug, subscriptionTier, status } = body;
 
+    // Validation
     if (!name || !slug) {
       return NextResponse.json(
         { error: 'Name and slug are required' },
@@ -73,10 +74,36 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (typeof name !== 'string' || name.trim().length < 2) {
+      return NextResponse.json(
+        { error: 'Tenant name must be at least 2 characters' },
+        { status: 400 }
+      );
+    }
+
+    if (typeof slug !== 'string' || !/^[a-z0-9-]+$/.test(slug)) {
+      return NextResponse.json(
+        { error: 'Slug must contain only lowercase letters, numbers, and hyphens' },
+        { status: 400 }
+      );
+    }
+
+    // Check if slug already exists
+    const existingTenant = await prisma.tenant.findUnique({
+      where: { slug },
+    });
+
+    if (existingTenant) {
+      return NextResponse.json(
+        { error: `Tenant slug "${slug}" already exists. Please use a different slug.` },
+        { status: 409 }
+      );
+    }
+
     const tenant = await prisma.tenant.create({
       data: {
-        name,
-        slug,
+        name: name.trim(),
+        slug: slug.toLowerCase(),
         subscriptionTier: subscriptionTier || 'free',
         status: status || 'active',
       },
@@ -85,8 +112,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ tenant }, { status: 201 });
   } catch (error: any) {
     console.error('Error creating tenant:', error);
+    
+    // Check for unique constraint error
+    if (error.code === 'P2002') {
+      const field = error.meta?.target?.[0] || 'field';
+      return NextResponse.json(
+        { error: `Tenant ${field} already exists. Please use a different value.` },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Failed to create tenant. Please try again.' },
       { status: 500 }
     );
   }

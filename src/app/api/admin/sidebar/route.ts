@@ -111,7 +111,7 @@ function getDefaultSidebarConfig(role: string) {
     { label: 'Invoices', icon: 'FiDollarSign', path: '/modules/Invoices', order: 6 },
   ];
 
-  if (role === 'TENANT_ADMIN') {
+  if (role === 'TENANT_ADMIN' || role === 'admin') {
     baseItems.push(
       { label: 'Users', icon: 'FiUser', path: '/tenant-admin/users', order: 7 },
       { label: 'Field Builder', icon: 'FiSettings', path: '/tenant-admin/field-builder', order: 8 },
@@ -119,10 +119,11 @@ function getDefaultSidebarConfig(role: string) {
     );
   }
 
-  if (role === 'PLATFORM_ADMIN') {
+  if (role === 'PLATFORM_ADMIN' || role === 'platform_admin') {
     baseItems.push(
       { label: 'Tenants', icon: 'FiDatabase', path: '/platform-admin/tenants', order: 10 },
-      { label: 'Analytics', icon: 'FiBarChart', path: '/platform-admin/dashboard', order: 11 }
+      { label: 'Approval Queue', icon: 'FiCheckCircle', path: '/platform-admin/approval-queue', order: 11 },
+      { label: 'Settings', icon: 'FiSliders', path: '/platform-admin/settings', order: 12 }
     );
   }
 

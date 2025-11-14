@@ -223,174 +223,142 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </Box>
         )}
 
-        {/* Week 4: Dynamic Sidebar Items (if configured) */}
-        {!sidebarLoading && dynamicSidebarItems && dynamicSidebarItems.length > 0 && (
+        {/* Loading complete - render sidebar */}
+        {!sidebarLoading && (
           <>
-            {dynamicSidebarItems.map((item) => {
-              const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
-              return (
-                <Button
-                  key={item.name}
-                  onClick={() => router.push(item.href)}
-                  variant={isActive ? 'solid' : 'ghost'}
-                  colorScheme={isActive ? (isPlatformAdmin ? 'orange' : isTenantAdmin ? 'purple' : 'blue') : 'gray'}
-                  justifyContent="flex-start"
-                  leftIcon={<Icon as={item.icon} />}
-                  size="md"
-                  fontWeight={isActive ? 'bold' : 'normal'}
-                  _hover={{ bg: isPlatformAdmin ? 'gray.700' : isTenantAdmin ? 'purple.50' : 'gray.100' }}
-                  color={isPlatformAdmin && !isActive ? 'gray.300' : undefined}
-                >
-                  <Text flex={1} textAlign="left" isTruncated>
-                    {item.name}
-                  </Text>
-                  {item.badge && (
-                    <Badge colorScheme="red" ml={2}>
-                      {item.badge}
-                    </Badge>
-                  )}
-                </Button>
-              );
-            })}
-          </>
-        )}
+            {/* Platform Admin Section - Always hardcoded for platform admin */}
+            {isPlatformAdmin && (
+              <>
+                <Text fontSize="xs" fontWeight="bold" color="gray.400" px={3} pt={2} pb={1}>
+                  PLATFORM ADMIN
+                </Text>
+                {platformAdminTools.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Button
+                      key={item.name}
+                      onClick={() => router.push(item.href)}
+                      variant={isActive ? 'solid' : 'ghost'}
+                      colorScheme={isActive ? 'orange' : 'gray'}
+                      justifyContent="flex-start"
+                      leftIcon={<Icon as={item.icon} />}
+                      size="md"
+                      fontWeight={isActive ? 'bold' : 'normal'}
+                      color={!isActive ? 'gray.300' : undefined}
+                      _hover={{ bg: 'gray.700' }}
+                    >
+                      <Text flex={1} textAlign="left" isTruncated>
+                        {item.name}
+                      </Text>
+                      {item.badge && (
+                        <Badge colorScheme="red" ml={2}>
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </Button>
+                  );
+                })}
+              </>
+            )}
 
-        {/* Fallback: Default hardcoded sidebar (if no dynamic config) */}
-        {!sidebarLoading && (!dynamicSidebarItems || dynamicSidebarItems.length === 0) && (
-          <>
-        {/* Platform Admin Section */}
-        {isPlatformAdmin && (
-          <>
-            <Text fontSize="xs" fontWeight="bold" color="gray.400" px={3} pt={2} pb={1}>
-              PLATFORM ADMIN
-            </Text>
-            {platformAdminTools.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Button
-                  key={item.name}
-                  onClick={() => router.push(item.href)}
-                  variant={isActive ? 'solid' : 'ghost'}
-                  colorScheme={isActive ? 'orange' : 'gray'}
-                  justifyContent="flex-start"
-                  leftIcon={<Icon as={item.icon} />}
-                  size="md"
-                  fontWeight={isActive ? 'bold' : 'normal'}
-                  color={!isActive ? 'gray.300' : undefined}
-                  _hover={{ bg: 'gray.700' }}
-                >
-                  <Text flex={1} textAlign="left" isTruncated>
-                    {item.name}
-                  </Text>
-                  {item.badge && (
-                    <Badge colorScheme="red" ml={2}>
-                      {item.badge}
-                    </Badge>
-                  )}
-                </Button>
-              );
-            })}
-          </>
-        )}
+            {/* Tenant Admin Section - Always hardcoded for tenant admin */}
+            {isTenantAdmin && (
+              <>
+                <Text fontSize="xs" fontWeight="bold" color="purple.600" px={3} pt={2} pb={1}>
+                  ⚙️ TENANT CONFIGURATION
+                </Text>
+                {tenantAdminTools.map((item) => {
+                  const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+                  return (
+                    <Button
+                      key={item.name}
+                      onClick={() => router.push(item.href)}
+                      variant={isActive ? 'solid' : 'ghost'}
+                      colorScheme={isActive ? 'purple' : 'gray'}
+                      justifyContent="flex-start"
+                      leftIcon={<Icon as={item.icon} />}
+                      size="md"
+                      fontWeight={isActive ? 'bold' : 'normal'}
+                      _hover={{ bg: 'purple.50' }}
+                    >
+                      <Text flex={1} textAlign="left" isTruncated>
+                        {item.name}
+                      </Text>
+                    </Button>
+                  );
+                })}
+              </>
+            )}
 
-        {/* Tenant Admin Section - ONLY for Tenant Admin (admin role) */}
-        {isTenantAdmin && (
-          <>
-            <Text fontSize="xs" fontWeight="bold" color="purple.600" px={3} pt={2} pb={1}>
-              ⚙️ TENANT CONFIGURATION
-            </Text>
-            {tenantAdminTools.map((item) => {
-              const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
-              return (
-                <Button
-                  key={item.name}
-                  onClick={() => router.push(item.href)}
-                  variant={isActive ? 'solid' : 'ghost'}
-                  colorScheme={isActive ? 'purple' : 'gray'}
-                  justifyContent="flex-start"
-                  leftIcon={<Icon as={item.icon} />}
-                  size="md"
-                  fontWeight={isActive ? 'bold' : 'normal'}
-                  _hover={{ bg: 'purple.50' }}
-                >
-                  <Text flex={1} textAlign="left" isTruncated>
-                    {item.name}
-                  </Text>
-                </Button>
-              );
-            })}
-          </>
-        )}
+            {/* Core Business Modules - Manager, Owner, Staff (NOT Platform Admin or Tenant Admin) */}
+            {!isPlatformAdmin && !isTenantAdmin && (
+              <>
+                <Text fontSize="xs" fontWeight="bold" color="gray.500" px={3} pt={2} pb={1}>
+                  📊 SALES MODULES
+                </Text>
+                {coreModules.map((item) => {
+                  // Check if item has role restrictions
+                  if (item.roles && item.roles.length > 0) {
+                    // Skip if current user role is not in allowed roles
+                    if (!item.roles.includes(role || '')) {
+                      return null;
+                    }
+                  }
+                  
+                  const isActive = pathname === item.href;
+                  return (
+                    <Button
+                      key={item.name}
+                      onClick={() => router.push(item.href)}
+                      variant={isActive ? 'solid' : 'ghost'}
+                      colorScheme={isActive ? 'blue' : 'gray'}
+                      justifyContent="flex-start"
+                      leftIcon={<Icon as={item.icon} />}
+                      size="md"
+                      fontWeight={isActive ? 'bold' : 'normal'}
+                      _hover={{ bg: 'gray.100' }}
+                    >
+                      <Text flex={1} textAlign="left" isTruncated>
+                        {item.name}
+                      </Text>
+                    </Button>
+                  );
+                })}
 
-        {/* Core Business Modules - Manager, Owner, Staff (NOT Platform Admin or Tenant Admin) */}
-        {!isPlatformAdmin && !isTenantAdmin && (
-          <>
-            <Text fontSize="xs" fontWeight="bold" color="gray.500" px={3} pt={2} pb={1}>
-              📊 SALES MODULES
-            </Text>
-            {coreModules.map((item) => {
-              // Check if item has role restrictions
-              if (item.roles && item.roles.length > 0) {
-                // Skip if current user role is not in allowed roles
-                if (!item.roles.includes(role || '')) {
-                  return null;
-                }
-              }
-              
-              const isActive = pathname === item.href;
-              return (
-                <Button
-                  key={item.name}
-                  onClick={() => router.push(item.href)}
-                  variant={isActive ? 'solid' : 'ghost'}
-                  colorScheme={isActive ? 'blue' : 'gray'}
-                  justifyContent="flex-start"
-                  leftIcon={<Icon as={item.icon} />}
-                  size="md"
-                  fontWeight={isActive ? 'bold' : 'normal'}
-                  _hover={{ bg: 'gray.100' }}
-                >
-                  <Text flex={1} textAlign="left" isTruncated>
-                    {item.name}
-                  </Text>
-                </Button>
-              );
-            })}
-
-            {/* Purchase & Vendor Management Section */}
-            <Text fontSize="xs" fontWeight="bold" color="green.600" px={3} pt={4} pb={1}>
-              🛒 PURCHASE MODULES
-            </Text>
-            {purchaseModules.map((item) => {
-              // Check if item has role restrictions
-              if (item.roles && item.roles.length > 0) {
-                // Skip if current user role is not in allowed roles
-                if (!item.roles.includes(role || '')) {
-                  return null;
-                }
-              }
-              
-              const isActive = pathname === item.href;
-              return (
-                <Button
-                  key={item.name}
-                  onClick={() => router.push(item.href)}
-                  variant={isActive ? 'solid' : 'ghost'}
-                  colorScheme={isActive ? 'green' : 'gray'}
-                  justifyContent="flex-start"
-                  leftIcon={<Icon as={item.icon} />}
-                  size="md"
-                  fontWeight={isActive ? 'bold' : 'normal'}
-                  _hover={{ bg: 'green.50' }}
-                >
-                  <Text flex={1} textAlign="left" isTruncated>
-                    {item.name}
-                  </Text>
-                </Button>
-              );
-            })}
-          </>
-        )}
+                {/* Purchase & Vendor Management Section */}
+                <Text fontSize="xs" fontWeight="bold" color="green.600" px={3} pt={4} pb={1}>
+                  🛒 PURCHASE MODULES
+                </Text>
+                {purchaseModules.map((item) => {
+                  // Check if item has role restrictions
+                  if (item.roles && item.roles.length > 0) {
+                    // Skip if current user role is not in allowed roles
+                    if (!item.roles.includes(role || '')) {
+                      return null;
+                    }
+                  }
+                  
+                  const isActive = pathname === item.href;
+                  return (
+                    <Button
+                      key={item.name}
+                      onClick={() => router.push(item.href)}
+                      variant={isActive ? 'solid' : 'ghost'}
+                      colorScheme={isActive ? 'green' : 'gray'}
+                      justifyContent="flex-start"
+                      leftIcon={<Icon as={item.icon} />}
+                      size="md"
+                      fontWeight={isActive ? 'bold' : 'normal'}
+                      _hover={{ bg: 'green.50' }}
+                    >
+                      <Text flex={1} textAlign="left" isTruncated>
+                        {item.name}
+                      </Text>
+                    </Button>
+                  );
+                })}
+              </>
+            )}
           </>
         )}
       </VStack>
