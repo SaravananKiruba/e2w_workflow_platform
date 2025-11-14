@@ -62,7 +62,9 @@ export default function TenantsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [totalStorageGB, setTotalStorageGB] = useState(0);
+  const [adminCredentials, setAdminCredentials] = useState<any>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isCredOpen, onOpen: onCredOpen, onClose: onCredClose } = useDisclosure();
   const toast = useToast();
   const router = useRouter();
 
@@ -138,6 +140,14 @@ export default function TenantsPage() {
       });
 
       if (res.ok) {
+        const data = await res.json();
+        
+        if (!selectedTenant && data.adminCredentials) {
+          // Show credentials modal for new tenant
+          setAdminCredentials(data.adminCredentials);
+          onCredOpen();
+        }
+
         toast({
           title: selectedTenant ? 'Tenant updated' : 'Tenant created',
           status: 'success',
@@ -460,6 +470,77 @@ export default function TenantsPage() {
                 {selectedTenant ? 'Update' : 'Create'}
               </Button>
             </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Tenant Admin Credentials Modal */}
+      <Modal isOpen={isCredOpen} onClose={onCredClose} size="lg">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Tenant Created Successfully! 🎉</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack spacing={4} align="stretch">
+              <Text fontWeight="bold" color="orange.600">
+                ⚠️ Important: Share these credentials with the tenant admin
+              </Text>
+              <Text fontSize="sm" color="gray.600">
+                These credentials are shown only once. The tenant admin can reset their password after first login.
+              </Text>
+              
+              <Box bg="gray.50" p={4} borderRadius="md" border="1px" borderColor="gray.200">
+                <VStack align="stretch" spacing={3}>
+                  <Box>
+                    <Text fontSize="sm" fontWeight="bold" color="gray.600">Email:</Text>
+                    <HStack>
+                      <Code fontSize="md" colorScheme="blue" p={2} flex={1}>
+                        {adminCredentials?.email}
+                      </Code>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(adminCredentials?.email || '');
+                          toast({ title: 'Email copied!', status: 'success', duration: 2000 });
+                        }}
+                      >
+                        Copy
+                      </Button>
+                    </HStack>
+                  </Box>
+                  
+                  <Box>
+                    <Text fontSize="sm" fontWeight="bold" color="gray.600">Password:</Text>
+                    <HStack>
+                      <Code fontSize="md" colorScheme="green" p={2} flex={1}>
+                        {adminCredentials?.password}
+                      </Code>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(adminCredentials?.password || '');
+                          toast({ title: 'Password copied!', status: 'success', duration: 2000 });
+                        }}
+                      >
+                        Copy
+                      </Button>
+                    </HStack>
+                  </Box>
+                </VStack>
+              </Box>
+
+              <Box bg="blue.50" p={3} borderRadius="md">
+                <Text fontSize="sm" color="blue.800">
+                  💡 {adminCredentials?.message}
+                </Text>
+              </Box>
+            </VStack>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button colorScheme="blue" onClick={onCredClose}>
+              I've Saved the Credentials
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
