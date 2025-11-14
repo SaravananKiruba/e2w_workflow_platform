@@ -79,7 +79,7 @@ model Branch {
 
 model User {
   id            String    @id @default(cuid())
-  tenantId      String
+  tenantId      String?   // Optional - Platform admins don't belong to any tenant
   branchId      String?
   
   email         String    @unique
@@ -97,7 +97,7 @@ model User {
   updatedAt     DateTime  @updatedAt
   lastLoginAt   DateTime?
   
-  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant        Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branch        Branch?   @relation(fields: [branchId], references: [id])
   
   createdAuditLogs AuditLog[] @relation("UserAuditLogs")

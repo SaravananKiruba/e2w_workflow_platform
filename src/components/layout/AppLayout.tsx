@@ -150,8 +150,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Platform Admin Tools - Only for platform_admin (ONLY tenant management)
   const platformAdminTools: NavItem[] = [
     { name: 'Tenants', icon: FiDatabase, href: '/platform-admin/tenants' },
-    { name: 'Approval Queue', icon: FiCheckCircle, href: '/platform-admin/approval-queue', badge: '3' },
-    { name: 'Settings', icon: FiSliders, href: '/platform-admin/settings' },
   ];
 
   const handleLogout = async () => {
