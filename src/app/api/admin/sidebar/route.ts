@@ -122,8 +122,7 @@ function getDefaultSidebarConfig(role: string) {
   if (role === 'PLATFORM_ADMIN' || role === 'platform_admin') {
     baseItems.push(
       { label: 'Tenants', icon: 'FiDatabase', path: '/platform-admin/tenants', order: 10 },
-      { label: 'Approval Queue', icon: 'FiCheckCircle', path: '/platform-admin/approval-queue', order: 11 },
-      { label: 'Settings', icon: 'FiSliders', path: '/platform-admin/settings', order: 12 }
+      { label: 'Approval Queue', icon: 'FiCheckCircle', path: '/platform-admin/approval-queue', order: 11 }
     );
   }
 

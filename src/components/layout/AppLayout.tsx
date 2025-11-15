@@ -154,7 +154,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
     { name: 'Module Builder', icon: FiGrid, href: '/tenant-admin/modules' },
     { name: 'Fields', icon: FiLayers, href: '/tenant-admin/field-builder' },
     { name: 'Workflows', icon: FiGitBranch, href: '/tenant-admin/workflow-builder' },
-    { name: 'Settings', icon: FiSettings, href: '/tenant-admin/settings' },
   ];
 
   // ========================================
