@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Easy2Work Theme Color Reference</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0485e2 0%, #0458c9 50%, #46d3c0 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+        }
+        
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .color-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .color-header {
+            padding: 30px;
+            color: white;
+            text-align: center;
+        }
+        
+        .color-header h2 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+        
+        .color-header .hex {
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        .primary-header { background: #0485e2; }
+        .secondary-header { background: #0458c9; }
+        .accent-header { background: #46d3c0; }
+        .olive-header { background: #566b17; }
+        .dark-header { background: #1a260b; }
+        
+        .color-shades {
+            padding: 20px;
+        }
+        
+        .shade {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .shade-label {
+            font-weight: 600;
+        }
+        
+        .shade-hex {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+        
+        .usage {
+            background: #f8f9fa;
+            padding: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .usage h3 {
+            font-size: 0.9rem;
+            color: #495057;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .usage ul {
+            list-style: none;
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        
+        .usage li {
+            padding: 4px 0;
+        }
+        
+        .usage li:before {
+            content: "→ ";
+            color: #007bff;
+        }
+        
+        /* Gradients Section */
+        .gradients {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 40px;
+        }
+        
+        .gradients h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .gradient-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .gradient-box {
+            height: 120px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+        }
+        
+        .grad1 { background: linear-gradient(to right, #0485e2, #0458c9); }
+        .grad2 { background: linear-gradient(to right, #0485e2, #46d3c0); }
+        .grad3 { background: linear-gradient(to right, #46d3c0, #566b17); }
+        .grad4 { background: linear-gradient(to right, #566b17, #1a260b); }
+        .grad5 { background: linear-gradient(135deg, #0485e2 0%, #46d3c0 50%, #566b17 100%); }
+        
+        /* Role Colors */
+        .roles {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .roles h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .role-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .role-card {
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .role-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+        
+        .role-card h3 {
+            font-size: 1.1rem;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .role-card p {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💼 Easy2Work Theme</h1>
+            <p>Complete Color Reference Guide</p>
+        </div>
+        
+        <div class="color-grid">
+            <!-- Primary Blue -->
+            <div class="color-card">
+                <div class="color-header primary-header">
+                    <h2>Primary Blue</h2>
+                    <div class="hex">#0485e2</div>
+                </div>
+                <div class="color-shades">
+                    <div class="shade" style="background: #e6f5fd; color: #02365a;">
+                        <span class="shade-label">50</span>
+                        <span class="shade-hex">#e6f5fd</span>
+                    </div>
+                    <div class="shade" style="background: #b8e3f9; color: #02365a;">
+                        <span class="shade-label">100</span>
+                        <span class="shade-hex">#b8e3f9</span>
+                    </div>
+                    <div class="shade" style="background: #8ad1f5; color: #011b2d;">
+                        <span class="shade-label">200</span>
+                        <span class="shade-hex">#8ad1f5</span>
+                    </div>
+                    <div class="shade" style="background: #5cbff1; color: #011b2d;">
+                        <span class="shade-label">300</span>
+                        <span class="shade-hex">#5cbff1</span>
+                    </div>
+                    <div class="shade" style="background: #2eaded; color: white;">
+                        <span class="shade-label">400</span>
+                        <span class="shade-hex">#2eaded</span>
+                    </div>
+                    <div class="shade" style="background: #0485e2; color: white;">
+                        <span class="shade-label">500 ⭐</span>
+                        <span class="shade-hex">#0485e2</span>
+                    </div>
+                    <div class="shade" style="background: #036bb5; color: white;">
+                        <span class="shade-label">600</span>
+                        <span class="shade-hex">#036bb5</span>
+                    </div>
+                    <div class="shade" style="background: #025088; color: white;">
+                        <span class="shade-label">700</span>
+                        <span class="shade-hex">#025088</span>
+                    </div>
+                    <div class="shade" style="background: #02365a; color: white;">
+                        <span class="shade-label">800</span>
+                        <span class="shade-hex">#02365a</span>
+                    </div>
+                    <div class="shade" style="background: #011b2d; color: white;">
+                        <span class="shade-label">900</span>
+                        <span class="shade-hex">#011b2d</span>
+                    </div>
+                </div>
+                <div class="usage">
+                    <h3>Usage</h3>
+                    <ul>
+                        <li>Main brand color</li>
+                        <li>Primary buttons & CTAs</li>
+                        <li>Tenant admin role</li>
+                        <li>Active states</li>
+                        <li>Links</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Secondary Blue -->
+            <div class="color-card">
+                <div class="color-header secondary-header">
+                    <h2>Secondary Blue</h2>
+                    <div class="hex">#0458c9</div>
+                </div>
+                <div class="color-shades">
+                    <div class="shade" style="background: #e6f0fc; color: #022351;">
+                        <span class="shade-label">50</span>
+                        <span class="shade-hex">#e6f0fc</span>
+                    </div>
+                    <div class="shade" style="background: #b8d5f7; color: #022351;">
+                        <span class="shade-label">100</span>
+                        <span class="shade-hex">#b8d5f7</span>
+                    </div>
+                    <div class="shade" style="background: #8abaf2; color: #011228;">
+                        <span class="shade-label">200</span>
+                        <span class="shade-hex">#8abaf2</span>
+                    </div>
+                    <div class="shade" style="background: #5c9fed; color: #011228;">
+                        <span class="shade-label">300</span>
+                        <span class="shade-hex">#5c9fed</span>
+                    </div>
+                    <div class="shade" style="background: #2e84e8; color: white;">
+                        <span class="shade-label">400</span>
+                        <span class="shade-hex">#2e84e8</span>
+                    </div>
+                    <div class="shade" style="background: #0458c9; color: white;">
+                        <span class="shade-label">500 ⭐</span>
+                        <span class="shade-hex">#0458c9</span>
+                    </div>
+                    <div class="shade" style="background: #0347a1; color: white;">
+                        <span class="shade-label">600</span>
+                        <span class="shade-hex">#0347a1</span>
+                    </div>
+                    <div class="shade" style="background: #033579; color: white;">
+                        <span class="shade-label">700</span>
+                        <span class="shade-hex">#033579</span>
+                    </div>
+                    <div class="shade" style="background: #022351; color: white;">
+                        <span class="shade-label">800</span>
+                        <span class="shade-hex">#022351</span>
+                    </div>
+                    <div class="shade" style="background: #011228; color: white;">
+                        <span class="shade-label">900</span>
+                        <span class="shade-hex">#011228</span>
+                    </div>
+                </div>
+                <div class="usage">
+                    <h3>Usage</h3>
+                    <ul>
+                        <li>Secondary actions</li>
+                        <li>Alternative buttons</li>
+                        <li>User role badges</li>
+                        <li>Supporting elements</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Accent Cyan -->
+            <div class="color-card">
+                <div class="color-header accent-header">
+                    <h2>Accent Cyan</h2>
+                    <div class="hex">#46d3c0</div>
+                </div>
+                <div class="color-shades">
+                    <div class="shade" style="background: #ebfaf7; color: #1c544d;">
+                        <span class="shade-label">50</span>
+                        <span class="shade-hex">#ebfaf7</span>
+                    </div>
+                    <div class="shade" style="background: #c5f0e8; color: #1c544d;">
+                        <span class="shade-label">100</span>
+                        <span class="shade-hex">#c5f0e8</span>
+                    </div>
+                    <div class="shade" style="background: #9fe6d9; color: #0e2a26;">
+                        <span class="shade-label">200</span>
+                        <span class="shade-hex">#9fe6d9</span>
+                    </div>
+                    <div class="shade" style="background: #79dcca; color: #0e2a26;">
+                        <span class="shade-label">300</span>
+                        <span class="shade-hex">#79dcca</span>
+                    </div>
+                    <div class="shade" style="background: #53d2bb; color: white;">
+                        <span class="shade-label">400</span>
+                        <span class="shade-hex">#53d2bb</span>
+                    </div>
+                    <div class="shade" style="background: #46d3c0; color: white;">
+                        <span class="shade-label">500 ⭐</span>
+                        <span class="shade-hex">#46d3c0</span>
+                    </div>
+                    <div class="shade" style="background: #38a99a; color: white;">
+                        <span class="shade-label">600</span>
+                        <span class="shade-hex">#38a99a</span>
+                    </div>
+                    <div class="shade" style="background: #2a7f73; color: white;">
+                        <span class="shade-label">700</span>
+                        <span class="shade-hex">#2a7f73</span>
+                    </div>
+                    <div class="shade" style="background: #1c544d; color: white;">
+                        <span class="shade-label">800</span>
+                        <span class="shade-hex">#1c544d</span>
+                    </div>
+                    <div class="shade" style="background: #0e2a26; color: white;">
+                        <span class="shade-label">900</span>
+                        <span class="shade-hex">#0e2a26</span>
+                    </div>
+                </div>
+                <div class="usage">
+                    <h3>Usage</h3>
+                    <ul>
+                        <li>Platform admin role</li>
+                        <li>Highlights & warnings</li>
+                        <li>Special features</li>
+                        <li>Success states</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Olive Green -->
+            <div class="color-card">
+                <div class="color-header olive-header">
+                    <h2>Olive Green</h2>
+                    <div class="hex">#566b17</div>
+                </div>
+                <div class="color-shades">
+                    <div class="shade" style="background: #f3f5e9; color: #232b0a;">
+                        <span class="shade-label">50</span>
+                        <span class="shade-hex">#f3f5e9</span>
+                    </div>
+                    <div class="shade" style="background: #dce2c0; color: #232b0a;">
+                        <span class="shade-label">100</span>
+                        <span class="shade-hex">#dce2c0</span>
+                    </div>
+                    <div class="shade" style="background: #c5cf97; color: #121505;">
+                        <span class="shade-label">200</span>
+                        <span class="shade-hex">#c5cf97</span>
+                    </div>
+                    <div class="shade" style="background: #aebc6e; color: #121505;">
+                        <span class="shade-label">300</span>
+                        <span class="shade-hex">#aebc6e</span>
+                    </div>
+                    <div class="shade" style="background: #97a945; color: white;">
+                        <span class="shade-label">400</span>
+                        <span class="shade-hex">#97a945</span>
+                    </div>
+                    <div class="shade" style="background: #566b17; color: white;">
+                        <span class="shade-label">500 ⭐</span>
+                        <span class="shade-hex">#566b17</span>
+                    </div>
+                    <div class="shade" style="background: #455613; color: white;">
+                        <span class="shade-label">600</span>
+                        <span class="shade-hex">#455613</span>
+                    </div>
+                    <div class="shade" style="background: #34400e; color: white;">
+                        <span class="shade-label">700</span>
+                        <span class="shade-hex">#34400e</span>
+                    </div>
+                    <div class="shade" style="background: #232b0a; color: white;">
+                        <span class="shade-label">800</span>
+                        <span class="shade-hex">#232b0a</span>
+                    </div>
+                    <div class="shade" style="background: #121505; color: white;">
+                        <span class="shade-label">900</span>
+                        <span class="shade-hex">#121505</span>
+                    </div>
+                </div>
+                <div class="usage">
+                    <h3>Usage</h3>
+                    <ul>
+                        <li>Manager role badges</li>
+                        <li>Owner role badges</li>
+                        <li>Growth features</li>
+                        <li>Natural themes</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Dark Base -->
+            <div class="color-card">
+                <div class="color-header dark-header">
+                    <h2>Dark Base</h2>
+                    <div class="hex">#1a260b</div>
+                </div>
+                <div class="color-shades">
+                    <div class="shade" style="background: #e9ebe7; color: #0b0f04;">
+                        <span class="shade-label">50</span>
+                        <span class="shade-hex">#e9ebe7</span>
+                    </div>
+                    <div class="shade" style="background: #c1c6bb; color: #0b0f04;">
+                        <span class="shade-label">100</span>
+                        <span class="shade-hex">#c1c6bb</span>
+                    </div>
+                    <div class="shade" style="background: #99a18f; color: #050802;">
+                        <span class="shade-label">200</span>
+                        <span class="shade-hex">#99a18f</span>
+                    </div>
+                    <div class="shade" style="background: #717c63; color: white;">
+                        <span class="shade-label">300</span>
+                        <span class="shade-hex">#717c63</span>
+                    </div>
+                    <div class="shade" style="background: #495737; color: white;">
+                        <span class="shade-label">400</span>
+                        <span class="shade-hex">#495737</span>
+                    </div>
+                    <div class="shade" style="background: #1a260b; color: white;">
+                        <span class="shade-label">500 ⭐</span>
+                        <span class="shade-hex">#1a260b</span>
+                    </div>
+                    <div class="shade" style="background: #151e09; color: white;">
+                        <span class="shade-label">600</span>
+                        <span class="shade-hex">#151e09</span>
+                    </div>
+                    <div class="shade" style="background: #101707; color: white;">
+                        <span class="shade-label">700</span>
+                        <span class="shade-hex">#101707</span>
+                    </div>
+                    <div class="shade" style="background: #0b0f04; color: white;">
+                        <span class="shade-label">800</span>
+                        <span class="shade-hex">#0b0f04</span>
+                    </div>
+                    <div class="shade" style="background: #050802; color: white;">
+                        <span class="shade-label">900</span>
+                        <span class="shade-hex">#050802</span>
+                    </div>
+                </div>
+                <div class="usage">
+                    <h3>Usage</h3>
+                    <ul>
+                        <li>Platform admin bg</li>
+                        <li>Dark backgrounds</li>
+                        <li>Text on light</li>
+                        <li>Deep shadows</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gradients -->
+        <div class="gradients">
+            <h2>Gradient Combinations</h2>
+            <div class="gradient-grid">
+                <div class="gradient-box grad1">Primary → Secondary</div>
+                <div class="gradient-box grad2">Primary → Accent</div>
+                <div class="gradient-box grad3">Accent → Olive</div>
+                <div class="gradient-box grad4">Olive → Dark</div>
+                <div class="gradient-box grad5">Multi-Color Hero</div>
+            </div>
+        </div>
+        
+        <!-- Roles -->
+        <div class="roles">
+            <h2>Role-Based Colors</h2>
+            <div class="role-grid">
+                <div class="role-card">
+                    <div class="role-badge" style="background: #46d3c0;">Platform Admin</div>
+                    <h3>Accent Cyan</h3>
+                    <p>Dark sidebar with cyan highlights</p>
+                </div>
+                <div class="role-card">
+                    <div class="role-badge" style="background: #0485e2;">Tenant Admin</div>
+                    <h3>Primary Blue</h3>
+                    <p>White sidebar with blue highlights</p>
+                </div>
+                <div class="role-card">
+                    <div class="role-badge" style="background: #566b17;">Manager</div>
+                    <h3>Olive Green</h3>
+                    <p>Subtle olive badge</p>
+                </div>
+                <div class="role-card">
+                    <div class="role-badge" style="background: #566b17;">Owner</div>
+                    <h3>Olive Green</h3>
+                    <p>Subtle olive badge</p>
+                </div>
+                <div class="role-card">
+                    <div class="role-badge" style="background: #0458c9;">User</div>
+                    <h3>Secondary Blue</h3>
+                    <p>Subtle secondary badge</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

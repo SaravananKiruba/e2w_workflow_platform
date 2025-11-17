@@ -156,20 +156,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
     await signOut({ redirect: true, callbackUrl: '/auth/signin' });
   };
 
-  // Color schemes based on role
+  // Color schemes based on role - Updated with new theme
   const sidebarBg = useColorModeValue(
-    isPlatformAdmin ? 'gray.800' : 'white',
-    'gray.900'
+    isPlatformAdmin ? 'dark.800' : 'white',
+    'dark.900'
   );
   const sidebarBorderColor = useColorModeValue(
-    isPlatformAdmin ? 'gray.700' : 'gray.200',
-    'gray.700'
+    isPlatformAdmin ? 'dark.700' : 'gray.200',
+    'dark.700'
   );
-  const logoColor = isPlatformAdmin ? 'accent.200' : 'primary.600';
+  const logoColor = isPlatformAdmin ? 'accent.300' : 'primary.600';
   const roleColors = {
-    platform_admin: 'orange',
+    platform_admin: 'accent',
     admin: 'primary',
-    user: 'gray',
+    user: 'secondary',
   };
 
   const SidebarContent = () => (
@@ -187,7 +187,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         p={6} 
         borderBottom="1px" 
         borderColor={sidebarBorderColor}
-        bg={isPlatformAdmin ? 'gray.900' : undefined}
+        bg={isPlatformAdmin ? 'dark.900' : undefined}
       >
         {isPlatformAdmin ? (
           <HStack spacing={2}>
@@ -197,7 +197,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 Easy2Work
               </Text>
               <Badge 
-                colorScheme="orange" 
+                colorScheme="accent" 
                 fontSize="xs"
                 variant="solid"
               >
@@ -222,7 +222,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 Easy2Work
               </Text>
               <Badge 
-                colorScheme={isManager ? 'green' : isOwner ? 'green' : 'blue'} 
+                colorScheme={isManager ? 'olive' : isOwner ? 'olive' : 'secondary'} 
                 fontSize="xs"
                 variant="subtle"
               >
@@ -246,7 +246,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             ================================================ */}
         {isPlatformAdmin && (
               <>
-                <Text fontSize="xs" fontWeight="bold" color="gray.400" px={3} pt={2} pb={1}>
+                <Text fontSize="xs" fontWeight="bold" color="accent.400" px={3} pt={2} pb={1}>
                   🏢 PLATFORM ADMIN
                 </Text>
                 {platformAdminModules.map((item) => {
@@ -256,13 +256,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       key={item.name}
                       onClick={() => router.push(item.href)}
                       variant={isActive ? 'solid' : 'ghost'}
-                      colorScheme={isActive ? 'orange' : 'gray'}
+                      colorScheme={isActive ? 'accent' : 'gray'}
                       justifyContent="flex-start"
                       leftIcon={<Icon as={item.icon} />}
                       size="md"
                       fontWeight={isActive ? 'bold' : 'normal'}
                       color={!isActive ? 'gray.300' : undefined}
-                      _hover={{ bg: 'gray.700' }}
+                      _hover={{ bg: 'dark.700' }}
                     >
                       <Text flex={1} textAlign="left" isTruncated>
                         {item.name}
@@ -283,7 +283,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 ================================================ */}
             {isTenantAdmin && (
               <>
-                <Text fontSize="xs" fontWeight="bold" color="purple.600" px={3} pt={2} pb={1}>
+                <Text fontSize="xs" fontWeight="bold" color="primary.600" px={3} pt={2} pb={1}>
                   ⚙️ TENANT CONFIGURATION
                 </Text>
                 {tenantAdminModules.map((item) => {
@@ -293,7 +293,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       key={item.name}
                       onClick={() => router.push(item.href)}
                       variant={isActive ? 'solid' : 'ghost'}
-                      colorScheme={isActive ? 'purple' : 'gray'}
+                      colorScheme={isActive ? 'primary' : 'gray'}
                       justifyContent="flex-start"
                       leftIcon={<Icon as={item.icon} />}
                       size="md"
@@ -394,11 +394,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
             _hover={{ bg: isPlatformAdmin ? 'gray.700' : 'gray.100' }}
           >
             <HStack spacing={3}>
-              <Avatar 
-                size="sm" 
-                name={session?.user?.name || undefined} 
+              <Avatar
+                size="sm"
+                name={session?.user?.name ?? undefined}
                 src={session?.user?.image ?? undefined}
-                bg={isPlatformAdmin ? 'orange.500' : isTenantAdmin ? 'purple.500' : isManager ? 'green.500' : 'blue.500'}
+                bg={isPlatformAdmin ? 'accent.500' : isTenantAdmin ? 'primary.500' : isManager ? 'olive.500' : 'secondary.500'}
               />
               <VStack align="start" spacing={0} flex={1}>
                 <Text 
@@ -422,10 +422,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 >
                   <Badge 
                     colorScheme={
-                      isPlatformAdmin ? 'orange' : 
-                      isTenantAdmin ? 'purple' : 
-                      isManager ? 'green' : 
-                      'gray'
+                      isPlatformAdmin ? 'accent' : 
+                      isTenantAdmin ? 'primary' : 
+                      isManager ? 'olive' : 
+                      'secondary'
                     } 
                     fontSize="xs"
                     variant={isPlatformAdmin ? 'solid' : 'subtle'}
@@ -492,8 +492,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
           display={{ base: 'flex', md: 'none' }}
           p={4}
           borderBottom="1px"
-          borderColor={useColorModeValue('gray.200', 'gray.700')}
-          bg={isPlatformAdmin ? 'gray.800' : useColorModeValue('white', 'gray.900')}
+          borderColor={useColorModeValue('gray.200', 'dark.700')}
+          bg={isPlatformAdmin ? 'dark.800' : useColorModeValue('white', 'dark.900')}
           alignItems="center"
           justifyContent="space-between"
         >
@@ -509,7 +509,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               Easy2Work
             </Text>
             <Badge 
-              colorScheme={isPlatformAdmin ? 'orange' : isTenantAdmin ? 'purple' : isManager ? 'green' : 'blue'} 
+              colorScheme={isPlatformAdmin ? 'accent' : isTenantAdmin ? 'primary' : isManager ? 'olive' : 'secondary'} 
               fontSize="xs"
               variant={isPlatformAdmin ? 'solid' : 'subtle'}
             >
@@ -520,7 +520,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </Box>
 
         {/* Page Content */}
-        <Box flex={1} overflowY="auto" bg={useColorModeValue('gray.50', 'gray.800')}>
+        <Box flex={1} overflowY="auto" bg={useColorModeValue('gray.50', 'dark.800')}>
           {children}
         </Box>
       </Flex>
