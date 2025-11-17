@@ -114,7 +114,11 @@ export default function Dashboard() {
         return;
       }
       
-      // Manager, Owner, Staff can see business dashboard - continue loading
+      // Manager, Owner, Staff -> Redirect to Leads module (default landing page)
+      if (role === 'manager' || role === 'owner' || role === 'staff') {
+        router.push('/modules/Leads');
+        return;
+      }
     }
   }, [status, session, router]);
 

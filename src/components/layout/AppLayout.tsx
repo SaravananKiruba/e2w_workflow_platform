@@ -23,7 +23,6 @@ import {
   Badge,
   Tooltip,
   useColorModeValue,
-  Spinner,
 } from '@chakra-ui/react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -34,7 +33,6 @@ import {
   FiSettings,
   FiLogOut,
   FiGrid,
-  FiBox,
   FiFileText,
   FiShoppingCart,
   FiDollarSign,
@@ -42,22 +40,17 @@ import {
   FiTrendingUp,
   FiLayers,
   FiGitBranch,
-  FiCheckCircle,
   FiDatabase,
-  FiSliders,
-  FiPackage,
   FiTag,
   FiClipboard,
   FiTruck,
-  FiBriefcase,
 } from 'react-icons/fi';
 
-// Week 4: Icon mapping for dynamic sidebar
+// Icon mapping for dynamic modules
 const iconMap: Record<string, any> = {
-  FiHome, FiUsers, FiSettings, FiGrid, FiBox, FiFileText,
+  FiHome, FiUsers, FiSettings, FiGrid, FiFileText,
   FiShoppingCart, FiDollarSign, FiCreditCard, FiTrendingUp,
-  FiLayers, FiGitBranch, FiCheckCircle, FiDatabase, FiSliders,
-  FiPackage, FiTag, FiClipboard, FiTruck, FiBriefcase,
+  FiLayers, FiGitBranch, FiDatabase, FiTag, FiClipboard, FiTruck,
 };
 
 interface AppLayoutProps {
@@ -78,9 +71,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Week 4: Dynamic sidebar state
-  const [dynamicSidebarItems, setDynamicSidebarItems] = useState<NavItem[] | null>(null);
-  const [sidebarLoading, setSidebarLoading] = useState(true);
+  const [tenantName, setTenantName] = useState<string>('');
+  const [dynamicModules, setDynamicModules] = useState<Record<string, NavItem[]>>({});
+  const [loadingModules, setLoadingModules] = useState(true);
 
   const role = session?.user?.role;
   const isPlatformAdmin = role === 'platform_admin';
@@ -89,67 +82,74 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const isOwner = role === 'owner';
   const isStaff = role === 'staff';
 
-  // Week 4: Fetch dynamic sidebar configuration
+  // Fetch tenant name for tenant admins
   useEffect(() => {
-    const fetchSidebarConfig = async () => {
-      try {
-        const response = await fetch(`/api/admin/sidebar?role=${role || 'staff'}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.items) {
-            // Map icon strings to actual icon components
-            const mappedItems = data.items.map((item: any) => ({
-              ...item,
-              icon: iconMap[item.icon] || FiGrid,
-            }));
-            setDynamicSidebarItems(mappedItems);
+    if (isTenantAdmin && !isPlatformAdmin) {
+      const fetchTenantName = async () => {
+        try {
+          const res = await fetch('/api/tenant/info', { credentials: 'same-origin' });
+          if (res.ok) {
+            const data = await res.json();
+            setTenantName(data.name || '');
           }
+        } catch (error) {
+          console.error('Failed to fetch tenant name:', error);
         }
-      } catch (error) {
-        console.error('Failed to fetch sidebar config:', error);
-      } finally {
-        setSidebarLoading(false);
-      }
-    };
-
-    if (session?.user) {
-      fetchSidebarConfig();
+      };
+      fetchTenantName();
     }
-  }, [session, role]);
+  }, [isTenantAdmin, isPlatformAdmin]);
 
-  // Core Business Modules - Available to Manager, Owner, and Staff (NOT Platform Admin or Tenant Admin)
-  const coreModules: NavItem[] = [
-    { name: 'Dashboard', icon: FiHome, href: '/dashboard' },
-    { name: 'Leads', icon: FiFileText, href: '/modules/Leads' },
-    { name: 'Clients', icon: FiUsers, href: '/modules/Clients' },
-    { name: 'Quotations', icon: FiFileText, href: '/modules/Quotations' },
-    { name: 'Orders', icon: FiShoppingCart, href: '/modules/Orders' },
-    { name: 'Invoices', icon: FiDollarSign, href: '/modules/Invoices' },
-    { name: 'Payments', icon: FiCreditCard, href: '/modules/Payments' },
-    // Analytics only for Manager and Owner (NOT Staff)
-    { name: 'Analytics', icon: FiTrendingUp, href: '/dashboard/finance', roles: ['manager', 'owner'] },
-  ];
+  // Fetch dynamic modules grouped by workflow for manager/owner/staff
+  useEffect(() => {
+    if (isPlatformAdmin) {
+      setLoadingModules(false);
+      return;
+    }
 
-  // Purchase & Vendor Management Modules
-  const purchaseModules: NavItem[] = [
-    { name: 'Vendors', icon: FiUsers, href: '/modules/Vendors', roles: ['manager', 'owner'] },
-    { name: 'Rate Catalogs', icon: FiTag, href: '/modules/RateCatalogs', roles: ['manager', 'owner'] },
-    { name: 'Purchase Requests', icon: FiClipboard, href: '/modules/PurchaseRequests' }, // All staff can create PRs
-    { name: 'Purchase Orders', icon: FiShoppingCart, href: '/modules/PurchaseOrders', roles: ['manager', 'owner'] },
-    { name: 'Goods Receipts', icon: FiTruck, href: '/modules/GoodsReceipts', roles: ['manager', 'owner', 'staff'] }, // Staff can receive goods
-    { name: 'Vendor Bills', icon: FiFileText, href: '/modules/VendorBills', roles: ['manager', 'owner'] },
-  ];
+    if (isManager || isOwner || isStaff) {
+      const fetchModules = async () => {
+        try {
+          const res = await fetch('/api/modules');
+          if (res.ok) {
+            const data = await res.json();
+            const groupedModules: Record<string, NavItem[]> = {};
+            
+            // Convert API response to NavItem format grouped by workflow
+            Object.entries(data.groupedByWorkflow || {}).forEach(([workflow, modules]) => {
+              groupedModules[workflow] = (modules as any[]).map(mod => ({
+                name: mod.displayName,
+                icon: iconMap[mod.icon] || FiGrid,
+                href: `/modules/${mod.moduleName}`,
+              }));
+            });
 
-  // Tenant Admin Tools - Only for Tenant Admin (admin role)
-  const tenantAdminTools: NavItem[] = [
-    { name: 'Users', icon: FiUsers, href: '/tenant-admin/users' },
-    { name: 'Field Builder', icon: FiLayers, href: '/tenant-admin/field-builder' },
-    { name: 'Workflow Builder', icon: FiGitBranch, href: '/tenant-admin/workflow-builder' },
-  ];
+            setDynamicModules(groupedModules);
+          }
+        } catch (error) {
+          console.error('Failed to fetch modules:', error);
+        } finally {
+          setLoadingModules(false);
+        }
+      };
+      fetchModules();
+    } else {
+      setLoadingModules(false);
+    }
+  }, [isManager, isOwner, isStaff, isPlatformAdmin]);
 
-  // Platform Admin Tools - Only for platform_admin (ONLY tenant management)
-  const platformAdminTools: NavItem[] = [
+  // Platform Admin Tools
+  const platformAdminModules: NavItem[] = [
     { name: 'Tenants', icon: FiDatabase, href: '/platform-admin/tenants' },
+  ];
+
+  // Tenant Admin Configuration Tools
+  const tenantAdminModules: NavItem[] = [
+    { name: 'Dashboard', icon: FiHome, href: '/tenant-admin' },
+    { name: 'Users', icon: FiUsers, href: '/tenant-admin/users' },
+    { name: 'Module Builder', icon: FiGrid, href: '/tenant-admin/modules' },
+    { name: 'Fields', icon: FiLayers, href: '/tenant-admin/field-builder' },
+    { name: 'Workflows', icon: FiGitBranch, href: '/tenant-admin/workflow-builder' },
   ];
 
   const handleLogout = async () => {
@@ -189,21 +189,48 @@ export default function AppLayout({ children }: AppLayoutProps) {
         borderColor={sidebarBorderColor}
         bg={isPlatformAdmin ? 'gray.900' : undefined}
       >
-        <HStack spacing={2}>
-          <Box fontSize="2xl">💼</Box>
-          <VStack align="start" spacing={0}>
-            <Text fontSize="lg" fontWeight="bold" color={logoColor}>
-              Easy2Work
+        {isPlatformAdmin ? (
+          <HStack spacing={2}>
+            <Box fontSize="2xl">💼</Box>
+            <VStack align="start" spacing={0}>
+              <Text fontSize="lg" fontWeight="bold" color={logoColor}>
+                Easy2Work
+              </Text>
+              <Badge 
+                colorScheme="orange" 
+                fontSize="xs"
+                variant="solid"
+              >
+                Platform
+              </Badge>
+            </VStack>
+          </HStack>
+        ) : isTenantAdmin ? (
+          <VStack align="start" spacing={2}>
+            <Text fontSize="sm" fontWeight="600" color="gray.500">
+              e2w platform
             </Text>
-            <Badge 
-              colorScheme={isPlatformAdmin ? 'orange' : isTenantAdmin ? 'purple' : isManager ? 'green' : 'blue'} 
-              fontSize="xs"
-              variant={isPlatformAdmin ? 'solid' : 'subtle'}
-            >
-              {isPlatformAdmin ? 'Platform' : isTenantAdmin ? 'Tenant Admin' : isManager ? 'Manager' : isOwner ? 'Owner' : 'User'}
-            </Badge>
+            <Text fontSize="md" fontWeight="bold" color="primary.600" isTruncated maxW="100%">
+              {tenantName}
+            </Text>
           </VStack>
-        </HStack>
+        ) : (
+          <HStack spacing={2}>
+            <Box fontSize="2xl">💼</Box>
+            <VStack align="start" spacing={0}>
+              <Text fontSize="lg" fontWeight="bold" color={logoColor}>
+                Easy2Work
+              </Text>
+              <Badge 
+                colorScheme={isManager ? 'green' : isOwner ? 'green' : 'blue'} 
+                fontSize="xs"
+                variant="subtle"
+              >
+                {isManager ? 'Manager' : isOwner ? 'Owner' : 'User'}
+              </Badge>
+            </VStack>
+          </HStack>
+        )}
       </Box>
 
       {/* Navigation Links */}
@@ -214,24 +241,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
         p={3} 
         overflowY="auto"
       >
-        {/* Week 4: Dynamic Sidebar Loading State */}
-        {sidebarLoading && (
-          <Box textAlign="center" py={4}>
-            <Spinner size="sm" color={isPlatformAdmin ? 'gray.400' : 'gray.500'} />
-          </Box>
-        )}
-
-        {/* Loading complete - render sidebar */}
-        {!sidebarLoading && (
-          <>
-            {/* Platform Admin Section - Always hardcoded for platform admin */}
-            {isPlatformAdmin && (
+        {/* ================================================
+            PLATFORM ADMIN - Platform Configuration
+            ================================================ */}
+        {isPlatformAdmin && (
               <>
                 <Text fontSize="xs" fontWeight="bold" color="gray.400" px={3} pt={2} pb={1}>
-                  PLATFORM ADMIN
+                  🏢 PLATFORM ADMIN
                 </Text>
-                {platformAdminTools.map((item) => {
-                  const isActive = pathname === item.href;
+                {platformAdminModules.map((item) => {
+                  const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                   return (
                     <Button
                       key={item.name}
@@ -259,13 +278,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </>
             )}
 
-            {/* Tenant Admin Section - Always hardcoded for tenant admin */}
+            {/* ================================================
+                TENANT ADMIN - Tenant Configuration
+                ================================================ */}
             {isTenantAdmin && (
               <>
                 <Text fontSize="xs" fontWeight="bold" color="purple.600" px={3} pt={2} pb={1}>
                   ⚙️ TENANT CONFIGURATION
                 </Text>
-                {tenantAdminTools.map((item) => {
+                {tenantAdminModules.map((item) => {
                   const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                   return (
                     <Button
@@ -288,77 +309,51 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </>
             )}
 
-            {/* Core Business Modules - Manager, Owner, Staff (NOT Platform Admin or Tenant Admin) */}
-            {!isPlatformAdmin && !isTenantAdmin && (
+            {/* ================================================
+                DYNAMIC BUSINESS MODULES - Manager/Owner/Staff
+                Grouped by Workflow (Sales, Purchase, Custom)
+                ================================================ */}
+            {(isManager || isOwner || isStaff) && (
               <>
-                <Text fontSize="xs" fontWeight="bold" color="gray.500" px={3} pt={2} pb={1}>
-                  📊 SALES MODULES
-                </Text>
-                {coreModules.map((item) => {
-                  // Check if item has role restrictions
-                  if (item.roles && item.roles.length > 0) {
-                    // Skip if current user role is not in allowed roles
-                    if (!item.roles.includes(role || '')) {
-                      return null;
-                    }
-                  }
-                  
-                  const isActive = pathname === item.href;
-                  return (
-                    <Button
-                      key={item.name}
-                      onClick={() => router.push(item.href)}
-                      variant={isActive ? 'solid' : 'ghost'}
-                      colorScheme={isActive ? 'blue' : 'gray'}
-                      justifyContent="flex-start"
-                      leftIcon={<Icon as={item.icon} />}
-                      size="md"
-                      fontWeight={isActive ? 'bold' : 'normal'}
-                      _hover={{ bg: 'gray.100' }}
-                    >
-                      <Text flex={1} textAlign="left" isTruncated>
-                        {item.name}
-                      </Text>
-                    </Button>
-                  );
-                })}
-
-                {/* Purchase & Vendor Management Section */}
-                <Text fontSize="xs" fontWeight="bold" color="green.600" px={3} pt={4} pb={1}>
-                  🛒 PURCHASE MODULES
-                </Text>
-                {purchaseModules.map((item) => {
-                  // Check if item has role restrictions
-                  if (item.roles && item.roles.length > 0) {
-                    // Skip if current user role is not in allowed roles
-                    if (!item.roles.includes(role || '')) {
-                      return null;
-                    }
-                  }
-                  
-                  const isActive = pathname === item.href;
-                  return (
-                    <Button
-                      key={item.name}
-                      onClick={() => router.push(item.href)}
-                      variant={isActive ? 'solid' : 'ghost'}
-                      colorScheme={isActive ? 'green' : 'gray'}
-                      justifyContent="flex-start"
-                      leftIcon={<Icon as={item.icon} />}
-                      size="md"
-                      fontWeight={isActive ? 'bold' : 'normal'}
-                      _hover={{ bg: 'green.50' }}
-                    >
-                      <Text flex={1} textAlign="left" isTruncated>
-                        {item.name}
-                      </Text>
-                    </Button>
-                  );
-                })}
+                {loadingModules ? (
+                  <Box textAlign="center" py={4}>
+                    <Text fontSize="xs" color="gray.500">Loading modules...</Text>
+                  </Box>
+                ) : (
+                  <>
+                    {Object.entries(dynamicModules).map(([workflow, modules]) => (
+                      <React.Fragment key={workflow}>
+                        <Text fontSize="xs" fontWeight="bold" color={workflow === 'Purchase' ? 'green.600' : 'blue.600'} px={3} pt={workflow === Object.keys(dynamicModules)[0] ? 2 : 4} pb={1}>
+                          {workflow === 'Sales' && '📊 SALES MODULES'}
+                          {workflow === 'Purchase' && '🛒 PURCHASE MODULES'}
+                          {workflow !== 'Sales' && workflow !== 'Purchase' && `🎯 ${workflow.toUpperCase()}`}
+                        </Text>
+                        {modules.map((item) => {
+                          const isActive = pathname === item.href;
+                          return (
+                            <Button
+                              key={item.name}
+                              onClick={() => router.push(item.href)}
+                              variant={isActive ? 'solid' : 'ghost'}
+                              colorScheme={isActive ? (workflow === 'Purchase' ? 'green' : workflow === 'Sales' ? 'blue' : 'purple') : 'gray'}
+                              justifyContent="flex-start"
+                              leftIcon={<Icon as={item.icon} />}
+                              size="md"
+                              fontWeight={isActive ? 'bold' : 'normal'}
+                              _hover={{ bg: workflow === 'Purchase' ? 'green.50' : workflow === 'Sales' ? 'blue.50' : 'purple.50' }}
+                            >
+                              <Text flex={1} textAlign="left" isTruncated>
+                                {item.name}
+                              </Text>
+                            </Button>
+                          );
+                        })}
+                      </React.Fragment>
+                    ))}
+                  </>
+                )}
               </>
             )}
-          </>
-        )}
       </VStack>
 
       {/* User Profile Section */}
@@ -424,8 +419,26 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </HStack>
           </MenuButton>
           <MenuList>
-            <MenuItem icon={<FiSettings />}>Profile Settings</MenuItem>
-            <MenuItem icon={<FiSettings />}>Preferences</MenuItem>
+            {isPlatformAdmin ? (
+              <MenuItem 
+                icon={<FiSettings />}
+                onClick={() => router.push('/platform-admin/change-password')}
+              >
+                Change Password
+              </MenuItem>
+            ) : isTenantAdmin ? (
+              <MenuItem 
+                icon={<FiSettings />}
+                onClick={() => router.push('/tenant-admin/change-password')}
+              >
+                Change Password
+              </MenuItem>
+            ) : (
+              <>
+                <MenuItem icon={<FiSettings />}>Profile Settings</MenuItem>
+                <MenuItem icon={<FiSettings />}>Preferences</MenuItem>
+              </>
+            )}
             <MenuDivider />
             <MenuItem icon={<FiLogOut />} onClick={handleLogout} color="red.500">
               Logout

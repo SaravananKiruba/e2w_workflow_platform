@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { getTenantContext } from '@/lib/tenant-context';
+import { authOptions } from '@/lib/auth';
 
 // GET /api/admin/sidebar - Get sidebar configuration for current role
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/sidebar - Update sidebar configuration
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -122,8 +123,7 @@ function getDefaultSidebarConfig(role: string) {
   if (role === 'PLATFORM_ADMIN' || role === 'platform_admin') {
     baseItems.push(
       { label: 'Tenants', icon: 'FiDatabase', path: '/platform-admin/tenants', order: 10 },
-      { label: 'Approval Queue', icon: 'FiCheckCircle', path: '/platform-admin/approval-queue', order: 11 },
-      { label: 'Settings', icon: 'FiSliders', path: '/platform-admin/settings', order: 12 }
+      { label: 'Approval Queue', icon: 'FiCheckCircle', path: '/platform-admin/approval-queue', order: 11 }
     );
   }
 

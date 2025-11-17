@@ -118,6 +118,16 @@ model ModuleConfiguration {
   icon        String?
   description String?
   
+  // Workflow-based configuration
+  workflowCategory String?  // Sales, Purchase, HR, Inventory, Custom
+  workflowName     String?  // e.g., "Sales Pipeline", "Purchase Cycle", "Employee Management"
+  position         Int      @default(999) // Order within workflow/category
+  insertAfter      String?  // Module name to insert after
+  showInNav        Boolean  @default(true) // Show in sidebar navigation
+  allowedRoles     String?  // JSON: Array of roles that can access ['manager', 'owner', 'staff']
+  isCustomModule   Boolean  @default(false) // True for tenant-created modules
+  isCustomized     Boolean  @default(false) // True if a system module has been customized
+  
   // Dynamic schema definition (stored as JSON strings)
   fields      String   // JSON: Array of field definitions
   layouts     String?  // JSON: UI layout configuration
@@ -137,6 +147,7 @@ model ModuleConfiguration {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   createdBy   String?
+  updatedBy   String?
   approvedBy  String?
   approvedAt  DateTime?
   
@@ -203,6 +214,30 @@ model SidebarConfiguration {
 // ==========================================
 // WORKFLOW ENGINE MODELS
 // ==========================================
+
+// Workflow Category - Define business workflows (Sales, Purchase, HR, etc.)
+model WorkflowCategory {
+  id              String   @id @default(cuid())
+  tenantId        String?  // Null for system default workflows
+  
+  name            String   // Sales, Purchase, HR, Inventory, Custom
+  displayName     String   // Display name for UI
+  description     String?
+  icon            String?  // Icon for this workflow category
+  
+  isSystem        Boolean  @default(false) // True for Sales/Purchase defaults
+  isActive        Boolean  @default(true)
+  
+  // Predefined module sequence (JSON array of module names)
+  moduleSequence  String?  // JSON: ['Leads', 'Clients', 'Quotations', 'Orders', 'Invoices', 'Payments']
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       String?
+  
+  @@unique([tenantId, name])
+  @@map("workflow_categories")
+}
 
 // Week 5-6: Workflow Template System
 model WorkflowTemplate {

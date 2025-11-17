@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { getTenantContext } from '@/lib/tenant-context';
+import { authOptions } from '@/lib/auth';
 
-// GET /api/workflows/templates - List all available workflow templates
+// GET /api/workflows/templates - Fetch all workflow templates
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
 // POST /api/workflows/templates - Create new workflow template
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

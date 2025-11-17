@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTenantContext, validateTenantAccess } from '@/lib/tenant-context';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
-  const context = await getTenantContext();
-  if (!context) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.tenantId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
     // Get module configuration
     const moduleConfig = await prisma.moduleConfiguration.findFirst({
       where: {
-        tenantId: context.tenantId,
+        tenantId: session.user.tenantId,
         moduleName,
         status: 'active',
       },
@@ -54,8 +55,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const context = await getTenantContext();
-  if (!context) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.tenantId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -73,7 +74,7 @@ export async function PUT(req: NextRequest) {
     // Get current configuration
     const currentConfig = await prisma.moduleConfiguration.findFirst({
       where: {
-        tenantId: context.tenantId,
+        tenantId: session.user.tenantId,
         moduleName,
         status: 'active',
       },
@@ -82,51 +83,50 @@ export async function PUT(req: NextRequest) {
 
     if (!currentConfig) {
       return NextResponse.json(
-        { error: `Module ${moduleName} not found` },
+        { error: `Module ${moduleName} not found. Please create the module first in Module Builder.` },
         { status: 404 }
       );
     }
 
-    // Create new version with updated fields
-    const newVersion = currentConfig.version + 1;
-    const updatedConfig = await prisma.moduleConfiguration.create({
+    // Update the current configuration with new fields
+    // We'll update the existing record instead of creating a new version
+    const updatedConfig = await prisma.moduleConfiguration.update({
+      where: {
+        id: currentConfig.id,
+      },
       data: {
-        tenantId: context.tenantId,
-        moduleName,
-        displayName: currentConfig.displayName,
-        icon: currentConfig.icon,
         description: description || currentConfig.description,
         fields: JSON.stringify(fields),
-        layouts: currentConfig.layouts,
-        validations: currentConfig.validations,
-        status: 'active',
-        version: newVersion,
+        isCustomized: true, // Mark as customized since fields are being updated
+        lastFieldUpdate: new Date(),
+        updatedBy: session.user.id,
+        updatedAt: new Date(),
       },
     });
 
     // Audit log
     await prisma.auditLog.create({
       data: {
-        tenantId: context.tenantId,
-        userId: context.userId,
+        tenantId: session.user.tenantId,
+        userId: session.user.id,
         action: 'update_module_config',
         entity: moduleName,
         entityId: updatedConfig.id,
         metadata: JSON.stringify({
-          version: newVersion,
+          version: updatedConfig.version,
           fieldCount: fields.length,
         }),
       },
     });
 
     console.log('[CONFIG SYNC] Fields updated successfully for module:', moduleName);
-    console.log('[CONFIG SYNC] New version:', newVersion);
+    console.log('[CONFIG SYNC] Version:', updatedConfig.version);
     console.log('[CONFIG SYNC] Fields count:', fields.length);
 
     return NextResponse.json({
       message: 'Fields updated successfully',
       moduleName,
-      version: newVersion,
+      version: updatedConfig.version,
       fields,
     }, {
       headers: {
