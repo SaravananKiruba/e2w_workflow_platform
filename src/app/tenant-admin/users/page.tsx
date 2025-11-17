@@ -7,6 +7,7 @@ import {
   Heading,
   VStack,
   HStack,
+  Stack,
   Text,
   Table,
   Thead,
@@ -42,6 +43,12 @@ import {
 export default function UserManagementPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterRole, setFilterRole] = useState('all');
+  const [sortBy, setSortBy] = useState('created');
+  const [sortOrder, setSortOrder] = useState('desc');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -56,6 +63,43 @@ export default function UserManagementPage() {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  useEffect(() => {
+    // Apply filters and sorting
+    let filtered = users.filter((user) => {
+      const matchSearch =
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchStatus = filterStatus === 'all' || user.status === filterStatus;
+      const matchRole = filterRole === 'all' || user.role === filterRole;
+      return matchSearch && matchStatus && matchRole;
+    });
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aVal, bVal;
+      switch (sortBy) {
+        case 'name':
+          aVal = a.name.toLowerCase();
+          bVal = b.name.toLowerCase();
+          break;
+        case 'email':
+          aVal = a.email.toLowerCase();
+          bVal = b.email.toLowerCase();
+          break;
+        case 'created':
+        default:
+          aVal = new Date(a.createdAt).getTime();
+          bVal = new Date(b.createdAt).getTime();
+      }
+
+      if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    setFilteredUsers(filtered);
+  }, [users, searchTerm, filterStatus, filterRole, sortBy, sortOrder]);
 
   const fetchUsers = async () => {
     try {
@@ -242,6 +286,138 @@ export default function UserManagementPage() {
         </Button>
       </HStack>
 
+      {/* Filter and Sort Controls */}
+      <Box bg="white" p={{ base: 4, md: 6 }} borderRadius="lg" border="1px" borderColor="gray.200" boxShadow="sm">
+        <VStack spacing={{ base: 4, md: 5 }} align="stretch">
+          {/* Title and Result Count */}
+          <HStack justify="space-between" align="center">
+            <VStack align="start" spacing={1}>
+              <Heading size="sm">Filter & Search</Heading>
+              <Text fontSize="xs" color="gray.500">
+                Showing <strong>{filteredUsers.length}</strong> of <strong>{users.length}</strong> users
+              </Text>
+            </VStack>
+            <Button
+              size="sm"
+              variant="ghost"
+              colorScheme="gray"
+              onClick={() => {
+                setSearchTerm('');
+                setFilterStatus('all');
+                setFilterRole('all');
+                setSortBy('created');
+                setSortOrder('desc');
+              }}
+            >
+              Clear All
+            </Button>
+          </HStack>
+
+          {/* Search Input */}
+          <FormControl>
+            <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+              🔍 Search Users
+            </FormLabel>
+            <Input
+              placeholder="Search by name or email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              size="md"
+              borderColor="gray.300"
+              _focus={{ borderColor: 'purple.500', boxShadow: '0 0 0 1px rgba(128, 90, 213, 0.5)' }}
+              autoComplete="off"
+            />
+          </FormControl>
+
+          {/* Filter Row - Status and Role */}
+          <HStack spacing={{ base: 2, md: 4 }} align="flex-end" flexWrap={{ base: "wrap", md: "nowrap" }}>
+            <FormControl minW={{ base: "full", sm: "180px" }}>
+              <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                📊 Status
+              </FormLabel>
+              <Select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                size="md"
+                borderColor="gray.300"
+                _focus={{ borderColor: 'purple.500' }}
+              >
+                <option value="all">All Status</option>
+                <option value="active">✅ Active</option>
+                <option value="inactive">❌ Inactive</option>
+              </Select>
+            </FormControl>
+
+            <FormControl minW={{ base: "full", sm: "180px" }}>
+              <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                👤 Role
+              </FormLabel>
+              <Select
+                value={filterRole}
+                onChange={(e) => setFilterRole(e.target.value)}
+                size="md"
+                borderColor="gray.300"
+                _focus={{ borderColor: 'purple.500' }}
+              >
+                <option value="all">All Roles</option>
+                <option value="admin">🔑 Admin</option>
+                <option value="manager">👔 Manager</option>
+                <option value="owner">👑 Owner</option>
+                <option value="staff">👤 Staff</option>
+              </Select>
+            </FormControl>
+          </HStack>
+
+          {/* Sort Controls */}
+          <HStack spacing={{ base: 2, md: 4 }} align="flex-end" flexWrap={{ base: "wrap", md: "nowrap" }}>
+            <FormControl minW={{ base: "full", sm: "200px" }}>
+              <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                ⬆️ Sort By
+              </FormLabel>
+              <Select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                size="md"
+                borderColor="gray.300"
+                _focus={{ borderColor: 'purple.500' }}
+              >
+                <option value="created">Created Date</option>
+                <option value="name">Name</option>
+                <option value="email">Email</option>
+              </Select>
+            </FormControl>
+
+            <FormControl minW={{ base: "full", sm: "150px" }}>
+              <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                Order
+              </FormLabel>
+              <Stack direction={{ base: "column", sm: "row" }} spacing={2}>
+                <Button
+                  size="md"
+                  variant={sortOrder === 'desc' ? 'solid' : 'outline'}
+                  colorScheme={sortOrder === 'desc' ? 'purple' : 'gray'}
+                  onClick={() => setSortOrder('desc')}
+                  flex={1}
+                  fontSize="sm"
+                >
+                  ↓ Descending
+                </Button>
+                <Button
+                  size="md"
+                  variant={sortOrder === 'asc' ? 'solid' : 'outline'}
+                  colorScheme={sortOrder === 'asc' ? 'purple' : 'gray'}
+                  onClick={() => setSortOrder('asc')}
+                  flex={1}
+                  fontSize="sm"
+                >
+                  ↑ Ascending
+                </Button>
+              </Stack>
+            </FormControl>
+          </HStack>
+        </VStack>
+      </Box>
+
       {/* Users Table */}
       <Box bg="white" borderRadius="lg" border="1px" borderColor="gray.200" overflow="hidden">
         <Box overflowX="auto">
@@ -257,8 +433,15 @@ export default function UserManagementPage() {
             </Tr>
           </Thead>
           <Tbody>
-            {users.map((user) => (
-              <Tr key={user.id}>
+            {filteredUsers.length === 0 ? (
+              <Tr>
+                <Td colSpan={6} textAlign="center" py={8}>
+                  <Text color="gray.500">No users found matching your filters</Text>
+                </Td>
+              </Tr>
+            ) : (
+              filteredUsers.map((user) => (
+                <Tr key={user.id}>
                 <Td fontWeight="600">{user.name}</Td>
                 <Td>{user.email}</Td>
                 <Td>
@@ -292,7 +475,8 @@ export default function UserManagementPage() {
                   </HStack>
                 </Td>
               </Tr>
-            ))}
+            ))
+            )}
           </Tbody>
         </Table>
         </Box>

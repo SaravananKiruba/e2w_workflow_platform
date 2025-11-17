@@ -78,6 +78,12 @@ export default function ModuleBuilderPage() {
   const [modules, setModules] = useState<Module[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filteredModules, setFilteredModules] = useState<Module[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterType, setFilterType] = useState('all');
+  const [sortBy, setSortBy] = useState('position');
+  const [sortOrder, setSortOrder] = useState('asc');
   const [formData, setFormData] = useState({
     moduleName: '',
     displayName: '',
@@ -95,6 +101,45 @@ export default function ModuleBuilderPage() {
     fetchModules();
     fetchWorkflows();
   }, []);
+
+  useEffect(() => {
+    // Apply filters and sorting
+    let filtered = modules.filter((module) => {
+      const matchSearch =
+        module.moduleName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        module.displayName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchCategory = filterCategory === 'all' || module.category === filterCategory;
+      const matchType = filterType === 'all' ||
+        (filterType === 'custom' && module.isCustomModule) ||
+        (filterType === 'system' && !module.isCustomModule);
+      return matchSearch && matchCategory && matchType;
+    });
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aVal, bVal;
+      switch (sortBy) {
+        case 'moduleName':
+          aVal = a.moduleName.toLowerCase();
+          bVal = b.moduleName.toLowerCase();
+          break;
+        case 'displayName':
+          aVal = a.displayName.toLowerCase();
+          bVal = b.displayName.toLowerCase();
+          break;
+        case 'position':
+        default:
+          aVal = a.position || 0;
+          bVal = b.position || 0;
+      }
+
+      if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    setFilteredModules(filtered);
+  }, [modules, searchTerm, filterCategory, filterType, sortBy, sortOrder]);
 
   const fetchModules = async () => {
     try {
@@ -269,6 +314,137 @@ export default function ModuleBuilderPage() {
           </Button>
         </HStack>
 
+        {/* Filter and Sort Controls */}
+        <Box bg="white" p={{ base: 4, md: 6 }} borderRadius="lg" border="1px" borderColor="gray.200" boxShadow="sm">
+          <VStack spacing={{ base: 4, md: 5 }} align="stretch">
+            {/* Title and Result Count */}
+            <HStack justify="space-between" align="center">
+              <VStack align="start" spacing={1}>
+                <Heading size="sm">Filter & Search</Heading>
+                <Text fontSize="xs" color="gray.500">
+                  Showing <strong>{filteredModules.length}</strong> of <strong>{modules.length}</strong> modules
+                </Text>
+              </VStack>
+              <Button
+                size="sm"
+                variant="ghost"
+                colorScheme="gray"
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterCategory('all');
+                  setFilterType('all');
+                  setSortBy('position');
+                  setSortOrder('asc');
+                }}
+              >
+                Clear All
+              </Button>
+            </HStack>
+
+            {/* Search Input */}
+            <FormControl>
+              <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                🔍 Search Modules
+              </FormLabel>
+              <Input
+                placeholder="Search by module name or display name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                size="md"
+                borderColor="gray.300"
+                _focus={{ borderColor: 'blue.500', boxShadow: '0 0 0 1px rgba(66, 153, 225, 0.5)' }}
+                autoComplete="off"
+              />
+            </FormControl>
+
+            {/* Filter Row - Category and Type */}
+            <HStack spacing={{ base: 2, md: 4 }} align="flex-end" flexWrap={{ base: "wrap", md: "nowrap" }}>
+              <FormControl minW={{ base: "full", sm: "180px" }}>
+                <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                  📂 Category
+                </FormLabel>
+                <Select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  size="md"
+                  borderColor="gray.300"
+                  _focus={{ borderColor: 'blue.500' }}
+                >
+                  <option value="all">All Categories</option>
+                  <option value="Sales">📊 Sales</option>
+                  <option value="Purchase">🛒 Purchase</option>
+                  <option value="Custom">⚡ Custom</option>
+                </Select>
+              </FormControl>
+
+              <FormControl minW={{ base: "full", sm: "180px" }}>
+                <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                  🔧 Type
+                </FormLabel>
+                <Select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  size="md"
+                  borderColor="gray.300"
+                  _focus={{ borderColor: 'blue.500' }}
+                >
+                  <option value="all">All Types</option>
+                  <option value="system">🏢 System</option>
+                  <option value="custom">⭐ Custom</option>
+                </Select>
+              </FormControl>
+            </HStack>
+
+            {/* Sort Controls */}
+            <HStack spacing={{ base: 2, md: 4 }} align="flex-end" flexWrap={{ base: "wrap", md: "nowrap" }}>
+              <FormControl minW={{ base: "full", sm: "200px" }}>
+                <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                  ⬆️ Sort By
+                </FormLabel>
+                <Select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  size="md"
+                  borderColor="gray.300"
+                  _focus={{ borderColor: 'blue.500' }}
+                >
+                  <option value="position">Position</option>
+                  <option value="moduleName">Module Name</option>
+                  <option value="displayName">Display Name</option>
+                </Select>
+              </FormControl>
+
+              <FormControl minW={{ base: "full", sm: "150px" }}>
+                <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                  Order
+                </FormLabel>
+                <Stack direction={{ base: "column", sm: "row" }} spacing={2}>
+                  <Button
+                    size="md"
+                    variant={sortOrder === 'desc' ? 'solid' : 'outline'}
+                    colorScheme={sortOrder === 'desc' ? 'blue' : 'gray'}
+                    onClick={() => setSortOrder('desc')}
+                    flex={1}
+                    fontSize="sm"
+                  >
+                    ↓ Descending
+                  </Button>
+                  <Button
+                    size="md"
+                    variant={sortOrder === 'asc' ? 'solid' : 'outline'}
+                    colorScheme={sortOrder === 'asc' ? 'blue' : 'gray'}
+                    onClick={() => setSortOrder('asc')}
+                    flex={1}
+                    fontSize="sm"
+                  >
+                    ↑ Ascending
+                  </Button>
+                </Stack>
+              </FormControl>
+            </HStack>
+          </VStack>
+        </Box>
+
         <Box bg="white" borderRadius="lg" shadow="sm" overflow="hidden">
           <Box overflowX="auto">
             <Table variant="simple" size={{ base: "sm", md: "md" }}>
@@ -288,12 +464,14 @@ export default function ModuleBuilderPage() {
                 <Tr>
                   <Td colSpan={7} textAlign="center">Loading...</Td>
                 </Tr>
-              ) : modules.length === 0 ? (
+              ) : filteredModules.length === 0 ? (
                 <Tr>
-                  <Td colSpan={7} textAlign="center">No modules found</Td>
+                  <Td colSpan={7} textAlign="center">
+                    <Text color="gray.500">No modules found matching your filters</Text>
+                  </Td>
                 </Tr>
               ) : (
-                modules.map((module) => (
+                filteredModules.map((module) => (
                   <Tr key={module.id}>
                     <Td fontWeight="medium">{module.moduleName}</Td>
                     <Td>{module.displayName}</Td>
