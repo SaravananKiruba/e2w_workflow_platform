@@ -95,6 +95,7 @@ export default function FieldBuilderPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [initialFieldsSnapshot, setInitialFieldsSnapshot] = useState<string>('');
 
   const bgColor = useColorModeValue('gray.50', 'gray.900');
 
@@ -106,8 +107,8 @@ export default function FieldBuilderPage() {
         if (response.ok) {
           const data = await response.json();
           const modules = data.modules.map((mod: any) => ({
-            value: mod.name,
-            label: mod.displayName || mod.name,
+            value: mod.moduleName,
+            label: mod.displayName || mod.moduleName,
           }));
           setAvailableModules(modules);
         }
@@ -131,12 +132,16 @@ export default function FieldBuilderPage() {
     }
   }, [selectedModule]);
 
-  // Track unsaved changes
+  // Track unsaved changes by comparing with initial snapshot
   useEffect(() => {
-    if (fields.length > 0 && moduleInfo) {
+    if (fields.length > 0 && initialFieldsSnapshot) {
+      const currentSnapshot = JSON.stringify(fields.map(({ id, ...field }) => field));
+      setHasUnsavedChanges(currentSnapshot !== initialFieldsSnapshot);
+    } else if (fields.length === 0 && initialFieldsSnapshot) {
+      // All fields removed
       setHasUnsavedChanges(true);
     }
-  }, [fields]);
+  }, [fields, initialFieldsSnapshot]);
 
   async function loadModuleConfig(moduleName: string) {
     setIsLoading(true);
@@ -157,7 +162,29 @@ export default function FieldBuilderPage() {
           ...field,
         }));
         setFields(fieldsWithIds);
+        
+        // Store initial snapshot for comparison
+        const snapshot = JSON.stringify(data.fields);
+        setInitialFieldsSnapshot(snapshot);
         setHasUnsavedChanges(false);
+      } else if (response.status === 404) {
+        // New module with no configuration yet - initialize empty
+        setModuleInfo({
+          moduleName: moduleName,
+          displayName: moduleName,
+          description: '',
+          version: 0,
+        });
+        setFields([]);
+        setInitialFieldsSnapshot('[]'); // Empty array snapshot
+        setHasUnsavedChanges(false);
+        
+        toast({
+          title: 'New Module',
+          description: 'This module has no field configuration yet. Add fields to get started.',
+          status: 'info',
+          duration: 4000,
+        });
       } else {
         toast({
           title: 'Error loading module',
@@ -316,6 +343,12 @@ export default function FieldBuilderPage() {
       if (response.ok) {
         const data = await response.json();
         setHasUnsavedChanges(false);
+        
+        // Update initial snapshot after successful save
+        const fieldsToSave = fields.map(({ id, ...field }) => field);
+        const snapshot = JSON.stringify(fieldsToSave);
+        setInitialFieldsSnapshot(snapshot);
+        
         toast({
           title: 'Configuration saved',
           description: `${selectedModule} configuration updated to version ${data.version}`,

@@ -43,7 +43,8 @@ interface Module {
   displayName: string;
   icon: string;
   description?: string;
-  purpose?: string;
+  workflowCategory?: string;
+  workflowName?: string;
   category?: string;
   position: number;
   insertAfter?: string;
@@ -53,13 +54,19 @@ interface Module {
   status: string;
 }
 
+interface Workflow {
+  id: string;
+  name: string;
+  displayName: string;
+  description?: string;
+  isSystem: boolean;
+}
+
 const ICON_OPTIONS = [
   'FiGrid', 'FiFileText', 'FiUsers', 'FiShoppingCart', 'FiDollarSign',
   'FiCreditCard', 'FiTrendingUp', 'FiLayers', 'FiDatabase', 'FiTag',
   'FiClipboard', 'FiTruck', 'FiPackage', 'FiBox', 'FiArchive',
 ];
-
-const CATEGORY_OPTIONS = ['Sales', 'Purchase', 'Inventory', 'Finance', 'HR', 'Custom'];
 
 const ROLE_OPTIONS = [
   { value: 'manager', label: 'Manager' },
@@ -69,14 +76,14 @@ const ROLE_OPTIONS = [
 
 export default function ModuleBuilderPage() {
   const [modules, setModules] = useState<Module[]>([]);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     moduleName: '',
     displayName: '',
     icon: 'FiGrid',
     description: '',
-    purpose: '',
-    category: 'Custom',
+    workflowCategory: '',
     insertAfter: '',
     allowedRoles: ['manager', 'owner', 'staff'],
   });
@@ -86,6 +93,7 @@ export default function ModuleBuilderPage() {
 
   useEffect(() => {
     fetchModules();
+    fetchWorkflows();
   }, []);
 
   const fetchModules = async () => {
@@ -115,6 +123,18 @@ export default function ModuleBuilderPage() {
     }
   };
 
+  const fetchWorkflows = async () => {
+    try {
+      const response = await fetch('/api/tenant-admin/workflows');
+      if (response.ok) {
+        const data = await response.json();
+        setWorkflows(data.workflows || []);
+      }
+    } catch (error) {
+      console.error('Error fetching workflows:', error);
+    }
+  };
+
   const handleOpenCreate = () => {
     setEditingModule(null);
     setFormData({
@@ -122,8 +142,7 @@ export default function ModuleBuilderPage() {
       displayName: '',
       icon: 'FiGrid',
       description: '',
-      purpose: '',
-      category: 'Custom',
+      workflowCategory: '',
       insertAfter: '',
       allowedRoles: ['manager', 'owner', 'staff'],
     });
@@ -137,8 +156,7 @@ export default function ModuleBuilderPage() {
       displayName: module.displayName,
       icon: module.icon || 'FiGrid',
       description: module.description || '',
-      purpose: module.purpose || '',
-      category: module.category || 'Custom',
+      workflowCategory: module.workflowCategory || '',
       insertAfter: module.insertAfter || '',
       allowedRoles: module.allowedRoles || ['manager', 'owner', 'staff'],
     });
@@ -232,7 +250,7 @@ export default function ModuleBuilderPage() {
   };
 
   const availableModulesForInsertAfter = modules.filter(m => 
-    m.category === formData.category && (!editingModule || m.id !== editingModule.id)
+    m.workflowCategory === formData.workflowCategory && (!editingModule || m.id !== editingModule.id)
   );
 
   return (
@@ -372,24 +390,19 @@ export default function ModuleBuilderPage() {
               </FormControl>
 
               <FormControl>
-                <FormLabel>Purpose</FormLabel>
-                <Textarea
-                  placeholder="What is this module used for?"
-                  value={formData.purpose}
-                  onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
-                />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Category</FormLabel>
+                <FormLabel>Workflow Category</FormLabel>
                 <Select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value, insertAfter: '' })}
+                  value={formData.workflowCategory}
+                  onChange={(e) => setFormData({ ...formData, workflowCategory: e.target.value, insertAfter: '' })}
                 >
-                  {CATEGORY_OPTIONS.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
+                  <option value="">-- Select Workflow --</option>
+                  {workflows.map(wf => (
+                    <option key={wf.id} value={wf.name}>{wf.displayName}</option>
                   ))}
                 </Select>
+                <Text fontSize="sm" color="gray.500" mt={1}>
+                  Assign this module to a workflow category
+                </Text>
               </FormControl>
 
               <FormControl>

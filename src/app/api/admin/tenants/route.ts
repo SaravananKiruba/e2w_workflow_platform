@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTenantContext } from '@/lib/tenant-context';
 import { prisma } from '@/lib/prisma';
+import { seedDefaultModules } from '@/lib/seed-default-modules';
 
 export async function GET(req: NextRequest) {
   const context = await getTenantContext();
@@ -156,12 +157,20 @@ export async function POST(req: NextRequest) {
 
       // Initialize auto-numbering sequences
       const autoNumberModules = [
+        // Sales Workflow
         { moduleName: 'Leads', prefix: 'LD', format: '{prefix}-{padded:5}' },
         { moduleName: 'Clients', prefix: 'CL', format: '{prefix}-{padded:5}' },
         { moduleName: 'Quotations', prefix: 'QT', format: '{prefix}-{padded:5}' },
         { moduleName: 'Orders', prefix: 'ORD', format: '{prefix}-{padded:5}' },
         { moduleName: 'Invoices', prefix: 'INV', format: '{prefix}/{year}/{padded:3}' },
         { moduleName: 'Payments', prefix: 'TXN', format: '{prefix}-{padded:5}' },
+        // Purchase Workflow
+        { moduleName: 'Vendors', prefix: 'VND', format: '{prefix}-{padded:5}' },
+        { moduleName: 'PurchaseRequests', prefix: 'PR', format: '{prefix}-{padded:5}' },
+        { moduleName: 'PurchaseOrders', prefix: 'PO', format: '{prefix}-{padded:5}' },
+        { moduleName: 'GoodsReceipt', prefix: 'GR', format: '{prefix}-{padded:5}' },
+        { moduleName: 'VendorBills', prefix: 'VB', format: '{prefix}/{year}/{padded:3}' },
+        { moduleName: 'VendorPayments', prefix: 'VP', format: '{prefix}-{padded:5}' },
       ];
 
       for (const module of autoNumberModules) {
@@ -178,6 +187,9 @@ export async function POST(req: NextRequest) {
 
       return { tenant, adminUser, branch };
     });
+
+    // Seed default modules after transaction (outside transaction for better error handling)
+    await seedDefaultModules(prisma, result.tenant.id, result.adminUser.id);
 
     // Return tenant info with admin credentials
     return NextResponse.json({

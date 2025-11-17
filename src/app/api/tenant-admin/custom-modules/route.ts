@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
-import NextAuth, { NextAuthOptions } from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
-
-// Import auth options inline (simplified version for this endpoint)
-const authOptions: NextAuthOptions = {
-  providers: [CredentialsProvider({ name: 'Credentials', credentials: {}, authorize: async () => null })],
-  session: { strategy: 'jwt' },
-  secret: process.env.NEXTAUTH_SECRET,
-};
+import { authOptions } from '@/lib/auth';
 
 // GET: Fetch all custom modules for the tenant
 export async function GET(request: NextRequest) {
@@ -25,7 +17,7 @@ export async function GET(request: NextRequest) {
       SELECT * FROM module_configurations
       WHERE tenantId = ${session.user.tenantId}
       AND status = 'active'
-      ORDER BY category ASC, position ASC
+      ORDER BY workflowCategory ASC, position ASC
     `;
 
     // Parse JSON fields
@@ -56,8 +48,7 @@ export async function POST(request: NextRequest) {
       displayName,
       icon,
       description,
-      purpose,
-      category,
+      workflowCategory,
       insertAfter,
       allowedRoles,
       fields,
@@ -98,12 +89,12 @@ export async function POST(request: NextRequest) {
         const afterModule = afterModules[0];
         position = afterModule.position + 1;
 
-        // Shift other modules in same category down
+        // Shift other modules in same workflow down
         await prisma.$executeRaw`
           UPDATE module_configurations
           SET position = position + 1
           WHERE tenantId = ${session.user.tenantId}
-          AND category = ${category || 'Custom'}
+          AND workflowCategory = ${workflowCategory || 'Custom'}
           AND position >= ${position}
           AND status = 'active'
         `;
@@ -143,13 +134,14 @@ export async function POST(request: NextRequest) {
     // Insert using raw query
     await prisma.$executeRaw`
       INSERT INTO module_configurations (
-        id, tenantId, moduleName, displayName, icon, description, purpose,
-        category, position, insertAfter, showInNav, allowedRoles,
+        id, tenantId, moduleName, displayName, icon, description,
+        workflowCategory, workflowName, position, insertAfter, showInNav, allowedRoles,
         isCustomModule, isCustomized, fields, status, version, createdAt, updatedAt, createdBy
       ) VALUES (
         ${id}, ${session.user.tenantId}, ${moduleName}, ${displayName}, ${icon || 'FiGrid'},
-        ${description || ''}, ${purpose || ''}, ${category || 'Custom'}, ${position}, ${insertAfter || null},
-        ${true}, ${allowedRolesStr}, ${true}, ${false}, ${fieldsStr}, ${'active'}, ${1}, ${now}, ${now}, ${session.user.id}
+        ${description || ''}, ${workflowCategory || 'Custom'}, ${workflowCategory || 'Custom'}, 
+        ${position}, ${insertAfter || null}, ${true}, ${allowedRolesStr}, ${true}, ${false}, 
+        ${fieldsStr}, ${'active'}, ${1}, ${now}, ${now}, ${session.user.id}
       )
     `;
 
@@ -213,13 +205,11 @@ export async function PUT(request: NextRequest) {
       updateParts.push('description = ?');
       updateValues.push(updates.description);
     }
-    if (updates.purpose !== undefined) {
-      updateParts.push('purpose = ?');
-      updateValues.push(updates.purpose);
-    }
-    if (updates.category) {
-      updateParts.push('category = ?');
-      updateValues.push(updates.category);
+    if (updates.workflowCategory) {
+      updateParts.push('workflowCategory = ?');
+      updateValues.push(updates.workflowCategory);
+      updateParts.push('workflowName = ?');
+      updateValues.push(updates.workflowCategory);
     }
     if (updates.showInNav !== undefined) {
       updateParts.push('showInNav = ?');

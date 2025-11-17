@@ -46,6 +46,13 @@ import {
   FiTruck,
 } from 'react-icons/fi';
 
+// Icon mapping for dynamic modules
+const iconMap: Record<string, any> = {
+  FiHome, FiUsers, FiSettings, FiGrid, FiFileText,
+  FiShoppingCart, FiDollarSign, FiCreditCard, FiTrendingUp,
+  FiLayers, FiGitBranch, FiDatabase, FiTag, FiClipboard, FiTruck,
+};
+
 interface AppLayoutProps {
   children: ReactNode;
 }
@@ -65,7 +72,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
 
   const [tenantName, setTenantName] = useState<string>('');
-  const [customModules, setCustomModules] = useState<NavItem[]>([]);
+  const [dynamicModules, setDynamicModules] = useState<Record<string, NavItem[]>>({});
   const [loadingModules, setLoadingModules] = useState(true);
 
   const role = session?.user?.role;
@@ -93,103 +100,56 @@ export default function AppLayout({ children }: AppLayoutProps) {
     }
   }, [isTenantAdmin, isPlatformAdmin]);
 
-  // Fetch custom modules for manager/owner/staff
+  // Fetch dynamic modules grouped by workflow for manager/owner/staff
   useEffect(() => {
+    if (isPlatformAdmin) {
+      setLoadingModules(false);
+      return;
+    }
+
     if (isManager || isOwner || isStaff) {
-      const fetchCustomModules = async () => {
+      const fetchModules = async () => {
         try {
-          const res = await fetch('/api/tenant-admin/custom-modules');
+          const res = await fetch('/api/modules');
           if (res.ok) {
             const data = await res.json();
-            const modules = data.modules || [];
+            const groupedModules: Record<string, NavItem[]> = {};
             
-            // Filter modules based on role permissions and convert to NavItem format
-            const roleModules = modules
-              .filter((mod: any) => {
-                // Check if module is visible in nav
-                if (!mod.showInNav) return false;
-                
-                // Check if user's role is allowed
-                const allowedRoles = mod.allowedRoles || [];
-                if (isManager && !allowedRoles.includes('manager')) return false;
-                if (isOwner && !allowedRoles.includes('owner')) return false;
-                if (isStaff && !allowedRoles.includes('staff')) return false;
-                
-                return true;
-              })
-              .map((mod: any) => ({
+            // Convert API response to NavItem format grouped by workflow
+            Object.entries(data.groupedByWorkflow || {}).forEach(([workflow, modules]) => {
+              groupedModules[workflow] = (modules as any[]).map(mod => ({
                 name: mod.displayName,
-                icon: FiGrid, // Default icon, can be mapped later
+                icon: iconMap[mod.icon] || FiGrid,
                 href: `/modules/${mod.moduleName}`,
               }));
-            
-            setCustomModules(roleModules);
+            });
+
+            setDynamicModules(groupedModules);
           }
         } catch (error) {
-          console.error('Failed to fetch custom modules:', error);
+          console.error('Failed to fetch modules:', error);
         } finally {
           setLoadingModules(false);
         }
       };
-      fetchCustomModules();
+      fetchModules();
     } else {
       setLoadingModules(false);
     }
-  }, [isManager, isOwner, isStaff]);
+  }, [isManager, isOwner, isStaff, isPlatformAdmin]);
 
-  // ========================================
-  // PLATFORM CONFIGURATION MODULES
-  // For Platform Admin & Tenant Admin ONLY
-  // ========================================
-  
-  // Platform Admin Tools - ONLY for platform_admin (System-level tenant management)
+  // Platform Admin Tools
   const platformAdminModules: NavItem[] = [
     { name: 'Tenants', icon: FiDatabase, href: '/platform-admin/tenants' },
   ];
 
-  // Tenant Admin Configuration Tools - ONLY for Tenant Admin (Tenant-level configuration)
+  // Tenant Admin Configuration Tools
   const tenantAdminModules: NavItem[] = [
     { name: 'Dashboard', icon: FiHome, href: '/tenant-admin' },
     { name: 'Users', icon: FiUsers, href: '/tenant-admin/users' },
     { name: 'Module Builder', icon: FiGrid, href: '/tenant-admin/modules' },
     { name: 'Fields', icon: FiLayers, href: '/tenant-admin/field-builder' },
     { name: 'Workflows', icon: FiGitBranch, href: '/tenant-admin/workflow-builder' },
-  ];
-
-  // ========================================
-  // APP/BUSINESS MODULES
-  // For Manager, Owner & Staff ONLY
-  // ========================================
-  
-  // Manager/Owner - Full business access + Analytics
-  const managerModules: NavItem[] = [
-    { name: 'Dashboard', icon: FiHome, href: '/dashboard' },
-    { name: 'Leads', icon: FiFileText, href: '/modules/Leads' },
-    { name: 'Clients', icon: FiUsers, href: '/modules/Clients' },
-    { name: 'Quotations', icon: FiFileText, href: '/modules/Quotations' },
-    { name: 'Orders', icon: FiShoppingCart, href: '/modules/Orders' },
-    { name: 'Invoices', icon: FiDollarSign, href: '/modules/Invoices' },
-    { name: 'Payments', icon: FiCreditCard, href: '/modules/Payments' },
-    { name: 'Analytics', icon: FiTrendingUp, href: '/dashboard/finance' },
-    { name: 'Vendors', icon: FiUsers, href: '/modules/Vendors' },
-    { name: 'Rate Catalogs', icon: FiTag, href: '/modules/RateCatalogs' },
-    { name: 'Purchase Requests', icon: FiClipboard, href: '/modules/PurchaseRequests' },
-    { name: 'Purchase Orders', icon: FiShoppingCart, href: '/modules/PurchaseOrders' },
-    { name: 'Goods Receipts', icon: FiTruck, href: '/modules/GoodsReceipts' },
-    { name: 'Vendor Bills', icon: FiFileText, href: '/modules/VendorBills' },
-  ];
-
-  // Staff - Core workflow only (no Analytics, limited Purchase)
-  const staffModules: NavItem[] = [
-    { name: 'Dashboard', icon: FiHome, href: '/dashboard' },
-    { name: 'Leads', icon: FiFileText, href: '/modules/Leads' },
-    { name: 'Clients', icon: FiUsers, href: '/modules/Clients' },
-    { name: 'Quotations', icon: FiFileText, href: '/modules/Quotations' },
-    { name: 'Orders', icon: FiShoppingCart, href: '/modules/Orders' },
-    { name: 'Invoices', icon: FiDollarSign, href: '/modules/Invoices' },
-    { name: 'Payments', icon: FiCreditCard, href: '/modules/Payments' },
-    { name: 'Purchase Requests', icon: FiClipboard, href: '/modules/PurchaseRequests' },
-    { name: 'Goods Receipts', icon: FiTruck, href: '/modules/GoodsReceipts' },
   ];
 
   const handleLogout = async () => {
@@ -350,168 +310,46 @@ export default function AppLayout({ children }: AppLayoutProps) {
             )}
 
             {/* ================================================
-                MANAGER/OWNER - Full Access
+                DYNAMIC BUSINESS MODULES - Manager/Owner/Staff
+                Grouped by Workflow (Sales, Purchase, Custom)
                 ================================================ */}
-            {(isManager || isOwner) && (
+            {(isManager || isOwner || isStaff) && (
               <>
-                <Text fontSize="xs" fontWeight="bold" color="blue.600" px={3} pt={2} pb={1}>
-                  📊 SALES MODULES
-                </Text>
-                {managerModules.slice(0, 8).map((item) => {
-                  const isActive = pathname === item.href;
-                  return (
-                    <Button
-                      key={item.name}
-                      onClick={() => router.push(item.href)}
-                      variant={isActive ? 'solid' : 'ghost'}
-                      colorScheme={isActive ? 'blue' : 'gray'}
-                      justifyContent="flex-start"
-                      leftIcon={<Icon as={item.icon} />}
-                      size="md"
-                      fontWeight={isActive ? 'bold' : 'normal'}
-                      _hover={{ bg: 'blue.50' }}
-                    >
-                      <Text flex={1} textAlign="left" isTruncated>
-                        {item.name}
-                      </Text>
-                    </Button>
-                  );
-                })}
-
-                <Text fontSize="xs" fontWeight="bold" color="green.600" px={3} pt={4} pb={1}>
-                  🛒 PURCHASE MODULES
-                </Text>
-                {managerModules.slice(8).map((item) => {
-                  const isActive = pathname === item.href;
-                  return (
-                    <Button
-                      key={item.name}
-                      onClick={() => router.push(item.href)}
-                      variant={isActive ? 'solid' : 'ghost'}
-                      colorScheme={isActive ? 'green' : 'gray'}
-                      justifyContent="flex-start"
-                      leftIcon={<Icon as={item.icon} />}
-                      size="md"
-                      fontWeight={isActive ? 'bold' : 'normal'}
-                      _hover={{ bg: 'green.50' }}
-                    >
-                      <Text flex={1} textAlign="left" isTruncated>
-                        {item.name}
-                      </Text>
-                    </Button>
-                  );
-                })}
-
-                {/* CUSTOM MODULES - Dynamically loaded */}
-                {customModules.length > 0 && (
+                {loadingModules ? (
+                  <Box textAlign="center" py={4}>
+                    <Text fontSize="xs" color="gray.500">Loading modules...</Text>
+                  </Box>
+                ) : (
                   <>
-                    <Text fontSize="xs" fontWeight="bold" color="purple.600" px={3} pt={4} pb={1}>
-                      🎯 CUSTOM MODULES
-                    </Text>
-                    {customModules.map((item) => {
-                      const isActive = pathname === item.href;
-                      return (
-                        <Button
-                          key={item.name}
-                          onClick={() => router.push(item.href)}
-                          variant={isActive ? 'solid' : 'ghost'}
-                          colorScheme={isActive ? 'purple' : 'gray'}
-                          justifyContent="flex-start"
-                          leftIcon={<Icon as={item.icon} />}
-                          size="md"
-                          fontWeight={isActive ? 'bold' : 'normal'}
-                          _hover={{ bg: 'purple.50' }}
-                        >
-                          <Text flex={1} textAlign="left" isTruncated>
-                            {item.name}
-                          </Text>
-                        </Button>
-                      );
-                    })}
-                  </>
-                )}
-              </>
-            )}
-
-            {/* ================================================
-                STAFF - Limited Access
-                ================================================ */}
-            {isStaff && (
-              <>
-                <Text fontSize="xs" fontWeight="bold" color="blue.600" px={3} pt={2} pb={1}>
-                  📊 SALES MODULES
-                </Text>
-                {staffModules.slice(0, 7).map((item) => {
-                  const isActive = pathname === item.href;
-                  return (
-                    <Button
-                      key={item.name}
-                      onClick={() => router.push(item.href)}
-                      variant={isActive ? 'solid' : 'ghost'}
-                      colorScheme={isActive ? 'blue' : 'gray'}
-                      justifyContent="flex-start"
-                      leftIcon={<Icon as={item.icon} />}
-                      size="md"
-                      fontWeight={isActive ? 'bold' : 'normal'}
-                      _hover={{ bg: 'blue.50' }}
-                    >
-                      <Text flex={1} textAlign="left" isTruncated>
-                        {item.name}
-                      </Text>
-                    </Button>
-                  );
-                })}
-
-                <Text fontSize="xs" fontWeight="bold" color="green.600" px={3} pt={4} pb={1}>
-                  🛒 PURCHASE MODULES
-                </Text>
-                {staffModules.slice(7).map((item) => {
-                  const isActive = pathname === item.href;
-                  return (
-                    <Button
-                      key={item.name}
-                      onClick={() => router.push(item.href)}
-                      variant={isActive ? 'solid' : 'ghost'}
-                      colorScheme={isActive ? 'green' : 'gray'}
-                      justifyContent="flex-start"
-                      leftIcon={<Icon as={item.icon} />}
-                      size="md"
-                      fontWeight={isActive ? 'bold' : 'normal'}
-                      _hover={{ bg: 'green.50' }}
-                    >
-                      <Text flex={1} textAlign="left" isTruncated>
-                        {item.name}
-                      </Text>
-                    </Button>
-                  );
-                })}
-
-                {/* CUSTOM MODULES - Dynamically loaded */}
-                {customModules.length > 0 && (
-                  <>
-                    <Text fontSize="xs" fontWeight="bold" color="purple.600" px={3} pt={4} pb={1}>
-                      🎯 CUSTOM MODULES
-                    </Text>
-                    {customModules.map((item) => {
-                      const isActive = pathname === item.href;
-                      return (
-                        <Button
-                          key={item.name}
-                          onClick={() => router.push(item.href)}
-                          variant={isActive ? 'solid' : 'ghost'}
-                          colorScheme={isActive ? 'purple' : 'gray'}
-                          justifyContent="flex-start"
-                          leftIcon={<Icon as={item.icon} />}
-                          size="md"
-                          fontWeight={isActive ? 'bold' : 'normal'}
-                          _hover={{ bg: 'purple.50' }}
-                        >
-                          <Text flex={1} textAlign="left" isTruncated>
-                            {item.name}
-                          </Text>
-                        </Button>
-                      );
-                    })}
+                    {Object.entries(dynamicModules).map(([workflow, modules]) => (
+                      <React.Fragment key={workflow}>
+                        <Text fontSize="xs" fontWeight="bold" color={workflow === 'Purchase' ? 'green.600' : 'blue.600'} px={3} pt={workflow === Object.keys(dynamicModules)[0] ? 2 : 4} pb={1}>
+                          {workflow === 'Sales' && '📊 SALES MODULES'}
+                          {workflow === 'Purchase' && '🛒 PURCHASE MODULES'}
+                          {workflow !== 'Sales' && workflow !== 'Purchase' && `🎯 ${workflow.toUpperCase()}`}
+                        </Text>
+                        {modules.map((item) => {
+                          const isActive = pathname === item.href;
+                          return (
+                            <Button
+                              key={item.name}
+                              onClick={() => router.push(item.href)}
+                              variant={isActive ? 'solid' : 'ghost'}
+                              colorScheme={isActive ? (workflow === 'Purchase' ? 'green' : workflow === 'Sales' ? 'blue' : 'purple') : 'gray'}
+                              justifyContent="flex-start"
+                              leftIcon={<Icon as={item.icon} />}
+                              size="md"
+                              fontWeight={isActive ? 'bold' : 'normal'}
+                              _hover={{ bg: workflow === 'Purchase' ? 'green.50' : workflow === 'Sales' ? 'blue.50' : 'purple.50' }}
+                            >
+                              <Text flex={1} textAlign="left" isTruncated>
+                                {item.name}
+                              </Text>
+                            </Button>
+                          );
+                        })}
+                      </React.Fragment>
+                    ))}
                   </>
                 )}
               </>
