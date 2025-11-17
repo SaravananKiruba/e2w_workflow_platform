@@ -407,11 +407,11 @@ export default function FieldBuilderPage() {
 
   return (
     <Box bg={bgColor} minH="100vh">
-      <Container maxW="container.2xl" py={6}>
-          <VStack spacing={6} align="stretch">
+      <Container maxW={{ base: "full", md: "container.2xl" }} py={{ base: 4, md: 6 }} px={{ base: 3, md: 6 }}>
+          <VStack spacing={{ base: 4, md: 6 }} align="stretch">
             {/* Header */}
             <Box>
-            <Breadcrumb spacing={2} separator={<FiChevronRight />} mb={4}>
+            <Breadcrumb spacing={2} separator={<FiChevronRight />} mb={4} fontSize={{ base: "sm", md: "md" }}>
               <BreadcrumbItem>
                 <BreadcrumbLink onClick={() => router.push('/tenant-admin')}>
                   Tenant Admin
@@ -422,17 +422,17 @@ export default function FieldBuilderPage() {
               </BreadcrumbItem>
             </Breadcrumb>
 
-            <HStack justify="space-between" mb={4}>
+            <VStack align="stretch" spacing={4}>
               <Box>
-                <Heading size="lg" mb={2}>
+                <Heading size={{ base: "md", md: "lg" }} mb={2}>
                   Visual Field Builder
                 </Heading>
-                <Text color="gray.600">
+                <Text color="gray.600" fontSize={{ base: "sm", md: "md" }}>
                   Drag and drop to create and configure form fields
                 </Text>
               </Box>
 
-              <HStack spacing={3}>
+              <HStack spacing={{ base: 2, md: 3 }} flexWrap="wrap">
                 {hasUnsavedChanges && (
                   <Tooltip label="Reset to last saved version">
                     <IconButton
@@ -441,6 +441,7 @@ export default function FieldBuilderPage() {
                       variant="outline"
                       onClick={handleReset}
                       isDisabled={!selectedModule}
+                      size={{ base: "sm", md: "md" }}
                     />
                   </Tooltip>
                 )}
@@ -452,6 +453,7 @@ export default function FieldBuilderPage() {
                     colorScheme="blue"
                     onClick={onOpen}
                     isDisabled={fields.length === 0}
+                    size={{ base: "sm", md: "md" }}
                   />
                 </Tooltip>
                 <Button
@@ -460,19 +462,22 @@ export default function FieldBuilderPage() {
                   onClick={handleSave}
                   isLoading={isSaving}
                   isDisabled={!selectedModule || !hasUnsavedChanges}
+                  size={{ base: "sm", md: "md" }}
+                  w={{ base: "full", sm: "auto" }}
                 >
                   Save Configuration
                 </Button>
               </HStack>
-            </HStack>
+            </VStack>
 
             {/* Module Selector */}
-            <FormControl maxW="400px">
-              <FormLabel>Select Module to Configure</FormLabel>
+            <FormControl maxW={{ base: "full", md: "400px" }}>
+              <FormLabel fontSize={{ base: "sm", md: "md" }}>Select Module to Configure</FormLabel>
               <Select
                 placeholder="Choose a module..."
                 value={selectedModule}
                 onChange={(e) => setSelectedModule(e.target.value)}
+                size={{ base: "sm", md: "md" }}
               >
                 {availableModules.map((module) => (
                   <option key={module.value} value={module.value}>
@@ -489,9 +494,13 @@ export default function FieldBuilderPage() {
               onDragEnd={handleDragEnd}
               onDragOver={handleDragOver}
             >
-              <Grid templateColumns="250px 1fr 350px" gap={6} h="calc(100vh - 300px)">
+              <Grid 
+                templateColumns={{ base: "1fr", lg: "250px 1fr", xl: "250px 1fr 350px" }} 
+                gap={{ base: 4, md: 6 }} 
+                h={{ base: "auto", lg: "calc(100vh - 300px)" }}
+              >
                 {/* Field Library */}
-                <GridItem>
+                <GridItem display={{ base: "none", lg: "block" }}>
                   <FieldLibrary />
                 </GridItem>
 
@@ -506,7 +515,7 @@ export default function FieldBuilderPage() {
                 </GridItem>
 
                 {/* Field Property Panel */}
-                <GridItem>
+                <GridItem display={{ base: "none", xl: "block" }}>
                   <FieldPropertyPanel
                     field={selectedField || null}
                     onFieldUpdate={handleFieldUpdate}
@@ -529,9 +538,9 @@ export default function FieldBuilderPage() {
       </Container>
 
       {/* Preview Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="4xl">
+      <Modal isOpen={isOpen} onClose={onClose} size={{ base: "full", md: "4xl" }}>
         <ModalOverlay />
-        <ModalContent maxH="90vh">
+        <ModalContent maxH="90vh" mx={{ base: 0, md: 4 }}>
           <ModalHeader>Form Preview - {selectedModule}</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>

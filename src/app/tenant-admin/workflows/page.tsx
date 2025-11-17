@@ -8,6 +8,7 @@ import {
   Heading,
   VStack,
   HStack,
+  Stack,
   FormControl,
   FormLabel,
   Input,
@@ -62,6 +63,11 @@ const ICON_OPTIONS = [
 export default function WorkflowManagementPage() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filteredWorkflows, setFilteredWorkflows] = useState<Workflow[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState('asc');
   const [formData, setFormData] = useState({
     name: '',
     displayName: '',
@@ -75,6 +81,40 @@ export default function WorkflowManagementPage() {
   useEffect(() => {
     fetchWorkflows();
   }, []);
+
+  useEffect(() => {
+    // Apply filters and sorting
+    let filtered = workflows.filter((workflow) => {
+      const matchSearch =
+        workflow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        workflow.displayName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchStatus = filterStatus === 'all' ||
+        (filterStatus === 'active' && workflow.isActive) ||
+        (filterStatus === 'inactive' && !workflow.isActive);
+      return matchSearch && matchStatus;
+    });
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aVal, bVal;
+      switch (sortBy) {
+        case 'displayName':
+          aVal = a.displayName.toLowerCase();
+          bVal = b.displayName.toLowerCase();
+          break;
+        case 'name':
+        default:
+          aVal = a.name.toLowerCase();
+          bVal = b.name.toLowerCase();
+      }
+
+      if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    setFilteredWorkflows(filtered);
+  }, [workflows, searchTerm, filterStatus, sortBy, sortOrder]);
 
   const fetchWorkflows = async () => {
     try {
@@ -242,8 +282,8 @@ export default function WorkflowManagementPage() {
     }
   };
 
-  const systemWorkflows = workflows.filter(w => w.isSystem);
-  const customWorkflows = workflows.filter(w => !w.isSystem);
+  const filteredSystemWorkflows = filteredWorkflows.filter(w => w.isSystem);
+  const filteredCustomWorkflows = filteredWorkflows.filter(w => !w.isSystem);
 
   return (
     <Container maxW="container.xl" py={8}>
@@ -271,6 +311,114 @@ export default function WorkflowManagementPage() {
           </Box>
         </Alert>
 
+        {/* Filter and Sort Controls */}
+        <Box bg="white" p={{ base: 4, md: 6 }} borderRadius="lg" border="1px" borderColor="gray.200" boxShadow="sm">
+          <VStack spacing={{ base: 4, md: 5 }} align="stretch">
+            {/* Title and Result Count */}
+            <HStack justify="space-between" align="center">
+              <VStack align="start" spacing={1}>
+                <Heading size="sm">Filter & Search</Heading>
+                <Text fontSize="xs" color="gray.500">
+                  Showing <strong>{filteredWorkflows.length}</strong> of <strong>{workflows.length}</strong> workflows
+                </Text>
+              </VStack>
+              <Button
+                size="sm"
+                variant="ghost"
+                colorScheme="gray"
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterStatus('all');
+                  setSortBy('name');
+                  setSortOrder('asc');
+                }}
+              >
+                Clear All
+              </Button>
+            </HStack>
+
+            {/* Search Input */}
+            <FormControl>
+              <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                🔍 Search Workflows
+              </FormLabel>
+              <Input
+                placeholder="Search by name or display name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                size="md"
+                borderColor="gray.300"
+                _focus={{ borderColor: 'purple.500', boxShadow: '0 0 0 1px rgba(128, 90, 213, 0.5)' }}
+                autoComplete="off"
+              />
+            </FormControl>
+
+            {/* Filter and Sort Row */}
+            <HStack spacing={{ base: 2, md: 4 }} align="flex-end" flexWrap={{ base: "wrap", md: "nowrap" }}>
+              <FormControl minW={{ base: "full", sm: "180px" }}>
+                <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                  📊 Status
+                </FormLabel>
+                <Select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  size="md"
+                  borderColor="gray.300"
+                  _focus={{ borderColor: 'purple.500' }}
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">✅ Active</option>
+                  <option value="inactive">❌ Inactive</option>
+                </Select>
+              </FormControl>
+
+              <FormControl minW={{ base: "full", sm: "200px" }}>
+                <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                  ⬆️ Sort By
+                </FormLabel>
+                <Select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  size="md"
+                  borderColor="gray.300"
+                  _focus={{ borderColor: 'purple.500' }}
+                >
+                  <option value="name">Name</option>
+                  <option value="displayName">Display Name</option>
+                </Select>
+              </FormControl>
+
+              <FormControl minW={{ base: "full", sm: "150px" }}>
+                <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
+                  Order
+                </FormLabel>
+                <Stack direction={{ base: "column", sm: "row" }} spacing={2}>
+                  <Button
+                    size="md"
+                    variant={sortOrder === 'desc' ? 'solid' : 'outline'}
+                    colorScheme={sortOrder === 'desc' ? 'purple' : 'gray'}
+                    onClick={() => setSortOrder('desc')}
+                    flex={1}
+                    fontSize="sm"
+                  >
+                    ↓ Descending
+                  </Button>
+                  <Button
+                    size="md"
+                    variant={sortOrder === 'asc' ? 'solid' : 'outline'}
+                    colorScheme={sortOrder === 'asc' ? 'purple' : 'gray'}
+                    onClick={() => setSortOrder('asc')}
+                    flex={1}
+                    fontSize="sm"
+                  >
+                    ↑ Ascending
+                  </Button>
+                </Stack>
+              </FormControl>
+            </HStack>
+          </VStack>
+        </Box>
+
         {/* System Workflows */}
         <Box>
           <Heading size="md" mb={4}>System Workflows</Heading>
@@ -285,12 +433,14 @@ export default function WorkflowManagementPage() {
                 </Tr>
               </Thead>
               <Tbody>
-                {systemWorkflows.length === 0 ? (
+                {filteredSystemWorkflows.length === 0 ? (
                   <Tr>
-                    <Td colSpan={4} textAlign="center">No system workflows found</Td>
+                    <Td colSpan={4} textAlign="center">
+                      <Text color="gray.500">No system workflows found matching your filters</Text>
+                    </Td>
                   </Tr>
                 ) : (
-                  systemWorkflows.map((workflow) => (
+                  filteredSystemWorkflows.map((workflow) => (
                     <Tr key={workflow.id}>
                       <Td fontWeight="medium">{workflow.name}</Td>
                       <Td>{workflow.displayName}</Td>
@@ -325,14 +475,18 @@ export default function WorkflowManagementPage() {
                   <Tr>
                     <Td colSpan={5} textAlign="center">Loading...</Td>
                   </Tr>
-                ) : customWorkflows.length === 0 ? (
+                ) : filteredCustomWorkflows.length === 0 ? (
                   <Tr>
                     <Td colSpan={5} textAlign="center">
-                      No custom workflows yet. Create one to get started!
+                      <Text color="gray.500">
+                        {workflows.filter(w => !w.isSystem).length === 0 
+                          ? "No custom workflows yet. Create one to get started!"
+                          : "No custom workflows found matching your filters"}
+                      </Text>
                     </Td>
                   </Tr>
                 ) : (
-                  customWorkflows.map((workflow) => (
+                  filteredCustomWorkflows.map((workflow) => (
                     <Tr key={workflow.id}>
                       <Td fontWeight="medium">{workflow.name}</Td>
                       <Td>{workflow.displayName}</Td>

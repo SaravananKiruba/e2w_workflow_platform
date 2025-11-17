@@ -38,6 +38,7 @@ import {
   IconButton,
   Switch,
   Code,
+  Stack,
 } from '@chakra-ui/react';
 import {
   FiPlus,
@@ -154,6 +155,14 @@ export default function TenantsPage() {
     onResetOpen();
   };
 
+  const handleCloseResetModal = () => {
+    // Clean up state when modal closes
+    setSelectedTenantForReset(null);
+    setResetPasswordValue('');
+    setResetResult(null);
+    onResetClose();
+  };
+
   const handleResetPassword = async () => {
     if (!selectedTenantForReset) return;
 
@@ -190,7 +199,8 @@ export default function TenantsPage() {
       if (res.ok) {
         setResetResult(data);
         toast({ title: 'Password reset', description: 'Tenant admin password has been reset. Copy the new password below.', status: 'success', duration: 4000 });
-        fetchTenants();
+        // Don't refetch tenants while modal is open - prevents table from disappearing
+        // fetchTenants() will be called when modal closes if needed
       } else {
         toast({ title: 'Reset failed', description: data.error || 'Failed to reset password', status: 'error', duration: 4000 });
       }
@@ -355,26 +365,28 @@ export default function TenantsPage() {
   };
 
   return (
-    <Container maxW="7xl" py={8}>
-      <VStack spacing={6} align="stretch">
+    <Container maxW={{ base: "full", md: "7xl" }} py={{ base: 4, md: 8 }} px={{ base: 3, md: 8 }}>
+      <VStack spacing={{ base: 4, md: 6 }} align="stretch">
         {/* Header */}
-        <HStack justify="space-between">
+        <HStack justify="space-between" flexWrap={{ base: "wrap", md: "nowrap" }} gap={{ base: 3, md: 0 }}>
           <VStack align="start" spacing={1}>
-            <Heading size="lg">Tenant Management</Heading>
-            <Text color="gray.600">Manage all tenants and their subscriptions</Text>
+            <Heading size={{ base: "md", md: "lg" }}>Tenant Management</Heading>
+            <Text color="gray.600" fontSize={{ base: "sm", md: "md" }}>Manage all tenants and their subscriptions</Text>
           </VStack>
           <Button
             leftIcon={<Icon as={FiPlus} />}
             colorScheme="blue"
             onClick={openCreateModal}
+            size={{ base: "sm", md: "md" }}
+            w={{ base: "full", sm: "auto" }}
           >
             Create Tenant
           </Button>
         </HStack>
 
         {/* Summary Stats */}
-        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-          <Box bg="white" p={4} borderRadius="lg" border="1px" borderColor="gray.200">
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={{ base: 3, md: 4 }}>
+          <Box bg="white" p={{ base: 3, md: 4 }} borderRadius="lg" border="1px" borderColor="gray.200">
             <Stat>
               <HStack>
                 <Icon as={FiUsers} boxSize={6} color="blue.500" />
@@ -385,7 +397,7 @@ export default function TenantsPage() {
             </Stat>
           </Box>
 
-          <Box bg="white" p={4} borderRadius="lg" border="1px" borderColor="gray.200">
+          <Box bg="white" p={{ base: 3, md: 4 }} borderRadius="lg" border="1px" borderColor="gray.200">
             <Stat>
               <HStack>
                 <Icon as={FiActivity} boxSize={6} color="green.500" />
@@ -398,7 +410,7 @@ export default function TenantsPage() {
             </Stat>
           </Box>
 
-          <Box bg="white" p={4} borderRadius="lg" border="1px" borderColor="gray.200">
+          <Box bg="white" p={{ base: 3, md: 4 }} borderRadius="lg" border="1px" borderColor="gray.200">
             <Stat>
               <HStack>
                 <Icon as={FiHardDrive} boxSize={6} color="orange.500" />
@@ -413,8 +425,8 @@ export default function TenantsPage() {
         </SimpleGrid>
 
         {/* Filters and Sort Controls */}
-        <Box bg="white" p={6} borderRadius="lg" border="1px" borderColor="gray.200" boxShadow="sm">
-          <VStack spacing={5} align="stretch">
+        <Box bg="white" p={{ base: 4, md: 6 }} borderRadius="lg" border="1px" borderColor="gray.200" boxShadow="sm">
+          <VStack spacing={{ base: 4, md: 5 }} align="stretch">
             {/* Title and Result Count */}
             <HStack justify="space-between" align="center">
               <VStack align="start" spacing={1}>
@@ -451,12 +463,13 @@ export default function TenantsPage() {
                 size="md"
                 borderColor="gray.300"
                 _focus={{ borderColor: 'blue.500', boxShadow: '0 0 0 1px rgba(66, 153, 225, 0.5)' }}
+                autoComplete="off"
               />
             </FormControl>
 
             {/* Filter Row 1 - Status and Tier */}
-            <HStack spacing={4} align="flex-end">
-              <FormControl minW="180px">
+            <HStack spacing={{ base: 2, md: 4 }} align="flex-end" flexWrap={{ base: "wrap", md: "nowrap" }}>
+              <FormControl minW={{ base: "full", sm: "180px" }}>
                 <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
                   📊 Status
                 </FormLabel>
@@ -474,7 +487,7 @@ export default function TenantsPage() {
                 </Select>
               </FormControl>
 
-              <FormControl minW="180px">
+              <FormControl minW={{ base: "full", sm: "180px" }}>
                 <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
                   💎 Tier
                 </FormLabel>
@@ -495,8 +508,8 @@ export default function TenantsPage() {
             </HStack>
 
             {/* Filter Row 2 - Sort Options */}
-            <HStack spacing={4} align="flex-end">
-              <FormControl minW="200px">
+            <HStack spacing={{ base: 2, md: 4 }} align="flex-end" flexWrap={{ base: "wrap", md: "nowrap" }}>
+              <FormControl minW={{ base: "full", sm: "200px" }}>
                 <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
                   ⬆️ Sort By
                 </FormLabel>
@@ -515,11 +528,11 @@ export default function TenantsPage() {
                 </Select>
               </FormControl>
 
-              <FormControl minW="150px">
+              <FormControl minW={{ base: "full", sm: "150px" }}>
                 <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
                   Order
                 </FormLabel>
-                <HStack spacing={2}>
+                <Stack direction={{ base: "column", sm: "row" }} spacing={2}>
                   <Button
                     size="md"
                     variant={sortOrder === 'desc' ? 'solid' : 'outline'}
@@ -540,7 +553,7 @@ export default function TenantsPage() {
                   >
                     ↑ Ascending
                   </Button>
-                </HStack>
+                </Stack>
               </FormControl>
             </HStack>
           </VStack>
@@ -557,8 +570,9 @@ export default function TenantsPage() {
               <Text color="gray.500">No tenants found matching your filters</Text>
             </Box>
           ) : (
-            <Table variant="simple">
-              <Thead bg="gray.50">
+            <Box overflowX="auto">
+              <Table variant="simple" size={{ base: "sm", md: "md" }}>
+                <Thead bg="gray.50">
                 <Tr>
                   <Th>Tenant Name</Th>
                   <Th>Slug</Th>
@@ -644,14 +658,15 @@ export default function TenantsPage() {
                 ))}
               </Tbody>
             </Table>
+            </Box>
           )}
         </Box>
       </VStack>
 
       {/* Create/Edit Modal */}
-      <Modal isOpen={isOpen} onClose={onClose}>
+      <Modal isOpen={isOpen} onClose={onClose} size={{ base: "full", md: "md" }}>
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent mx={{ base: 0, md: 4 }}>
           <ModalHeader>
             {selectedTenant ? 'Edit Tenant' : 'Create New Tenant'}
           </ModalHeader>
@@ -715,22 +730,22 @@ export default function TenantsPage() {
           </ModalBody>
 
           <ModalFooter>
-            <HStack spacing={3}>
-              <Button variant="ghost" onClick={onClose}>
+            <Stack direction={{ base: "column", sm: "row" }} spacing={3} w={{ base: "full", sm: "auto" }}>
+              <Button variant="ghost" onClick={onClose} w={{ base: "full", sm: "auto" }}>
                 Cancel
               </Button>
-              <Button colorScheme="blue" onClick={handleSubmit}>
+              <Button colorScheme="blue" onClick={handleSubmit} w={{ base: "full", sm: "auto" }}>
                 {selectedTenant ? 'Update' : 'Create'}
               </Button>
-            </HStack>
+            </Stack>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
       {/* Tenant Admin Credentials Modal */}
-      <Modal isOpen={isCredOpen} onClose={onCredClose} size="lg">
+      <Modal isOpen={isCredOpen} onClose={onCredClose} size={{ base: "full", md: "lg" }}>
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent mx={{ base: 0, md: 4 }}>
           <ModalHeader>Tenant Created Successfully! 🎉</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
@@ -746,12 +761,13 @@ export default function TenantsPage() {
                 <VStack align="stretch" spacing={3}>
                   <Box>
                     <Text fontSize="sm" fontWeight="bold" color="gray.600">Email:</Text>
-                    <HStack>
+                    <Stack direction={{ base: "column", sm: "row" }} spacing={2}>
                       <Code fontSize="md" colorScheme="blue" p={2} flex={1}>
                         {adminCredentials?.email}
                       </Code>
                       <Button
                         size="sm"
+                        w={{ base: "full", sm: "auto" }}
                         onClick={() => {
                           navigator.clipboard.writeText(adminCredentials?.email || '');
                           toast({ title: 'Email copied!', status: 'success', duration: 2000 });
@@ -759,17 +775,18 @@ export default function TenantsPage() {
                       >
                         Copy
                       </Button>
-                    </HStack>
+                    </Stack>
                   </Box>
                   
                   <Box>
                     <Text fontSize="sm" fontWeight="bold" color="gray.600">Password:</Text>
-                    <HStack>
+                    <Stack direction={{ base: "column", sm: "row" }} spacing={2}>
                       <Code fontSize="md" colorScheme="green" p={2} flex={1}>
                         {adminCredentials?.password}
                       </Code>
                       <Button
                         size="sm"
+                        w={{ base: "full", sm: "auto" }}
                         onClick={() => {
                           navigator.clipboard.writeText(adminCredentials?.password || '');
                           toast({ title: 'Password copied!', status: 'success', duration: 2000 });
@@ -777,7 +794,7 @@ export default function TenantsPage() {
                       >
                         Copy
                       </Button>
-                    </HStack>
+                    </Stack>
                   </Box>
                 </VStack>
               </Box>
@@ -799,9 +816,9 @@ export default function TenantsPage() {
       </Modal>
 
       {/* Reset Tenant Admin Password Modal */}
-      <Modal isOpen={isResetOpen} onClose={onResetClose} size="md">
+      <Modal isOpen={isResetOpen} onClose={handleCloseResetModal} size={{ base: "full", md: "md" }}>
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent mx={{ base: 0, md: 4 }}>
           <ModalHeader>Reset Tenant Admin Password</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
@@ -817,6 +834,7 @@ export default function TenantsPage() {
                   value={resetPasswordValue}
                   onChange={(e) => setResetPasswordValue(e.target.value)}
                   placeholder="Enter a new password (min 6 characters)"
+                  autoComplete="new-password"
                 />
                 <Text fontSize="xs" color="gray.600" mt={1}>
                   Share this password with the tenant admin for their new login.
@@ -826,21 +844,30 @@ export default function TenantsPage() {
               {resetResult && (
                 <Box bg="gray.50" p={3} borderRadius="md" border="1px" borderColor="gray.200">
                   <Text fontSize="sm" fontWeight="bold">New Credentials</Text>
-                  <HStack mt={2} spacing={3}>
-                    <Code>{resetResult.email}</Code>
-                    <Code colorScheme="green">{resetResult.password}</Code>
-                    <Button size="sm" onClick={() => { navigator.clipboard.writeText(resetResult.password || ''); toast({ title: 'Password copied', status: 'success' }); }}>Copy</Button>
-                  </HStack>
+                  <VStack mt={2} spacing={2} align="stretch">
+                    <Code fontSize="sm">{resetResult.email}</Code>
+                    <Code colorScheme="green" fontSize="sm">{resetResult.password}</Code>
+                    <Button 
+                      size="sm" 
+                      w="full"
+                      onClick={() => { 
+                        navigator.clipboard.writeText(resetResult.password || ''); 
+                        toast({ title: 'Password copied', status: 'success', duration: 2000 }); 
+                      }}
+                    >
+                      Copy Password
+                    </Button>
+                  </VStack>
                 </Box>
               )}
             </VStack>
           </ModalBody>
 
           <ModalFooter>
-            <HStack spacing={3}>
-              <Button variant="ghost" onClick={onResetClose}>Cancel</Button>
-              <Button colorScheme="orange" onClick={handleResetPassword}>Reset Password</Button>
-            </HStack>
+            <Stack direction={{ base: "column", sm: "row" }} spacing={3} w={{ base: "full", sm: "auto" }}>
+              <Button variant="ghost" onClick={handleCloseResetModal} w={{ base: "full", sm: "auto" }}>Cancel</Button>
+              <Button colorScheme="orange" onClick={handleResetPassword} w={{ base: "full", sm: "auto" }}>Reset Password</Button>
+            </Stack>
           </ModalFooter>
         </ModalContent>
       </Modal>

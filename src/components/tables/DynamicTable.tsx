@@ -107,11 +107,11 @@ export function DynamicTable({
     <Box>
       {/* Filter Bar */}
       {(enableSearch || enableFilters) && (
-        <Box mb={4} p={4} bg="white" borderRadius="md" shadow="sm">
-          <HStack spacing={4} mb={activeFilters.length > 0 ? 3 : 0}>
+        <Box mb={4} p={{ base: 3, md: 4 }} bg="white" borderRadius="md" shadow="sm">
+          <HStack spacing={{ base: 2, md: 4 }} mb={activeFilters.length > 0 ? 3 : 0} flexWrap="wrap">
             {/* Search Input */}
             {enableSearch && (
-              <InputGroup maxW="400px">
+              <InputGroup maxW={{ base: "full", md: "400px" }} flex={{ base: 1, md: "initial" }}>
                 <InputLeftElement>
                   <Icon as={FiSearch} color="gray.400" />
                 </InputLeftElement>
@@ -119,6 +119,7 @@ export function DynamicTable({
                   placeholder="Search..." 
                   value={searchTerm}
                   onChange={handleSearchChange}
+                  size={{ base: "sm", md: "md" }}
                 />
               </InputGroup>
             )}
@@ -126,7 +127,7 @@ export function DynamicTable({
             {/* Column Visibility Toggle */}
             {enableFilters && (
               <Menu closeOnSelect={false}>
-                <MenuButton as={Button} rightIcon={<Icon as={FiChevronDown} />} size="sm">
+                <MenuButton as={Button} rightIcon={<Icon as={FiChevronDown} />} size={{ base: "sm", md: "md" }}>
                   Columns
                 </MenuButton>
                 <MenuList>
@@ -167,8 +168,9 @@ export function DynamicTable({
       )}
 
       {/* Table */}
-      <Table variant="simple">
-        <Thead>
+      <Box overflowX="auto">
+        <Table variant="simple" size={{ base: "sm", md: "md" }}>
+          <Thead>
           <Tr>
             {visibleFields.map(field => (
               <Th key={field.name}>{field.label}</Th>
@@ -198,6 +200,7 @@ export function DynamicTable({
           )}
         </Tbody>
       </Table>
+      </Box>
     </Box>
   );
 }
