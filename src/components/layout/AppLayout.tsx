@@ -348,6 +348,27 @@ export default function AppLayout({ children }: AppLayoutProps) {
                             </Button>
                           );
                         })}
+                        
+                        {/* Analytics Link - Only for Manager/Owner */}
+                        {(isManager || isOwner) && (
+                          <Button
+                            onClick={() => router.push(`/analytics/${workflow}`)}
+                            variant={pathname === `/analytics/${workflow}` ? 'solid' : 'ghost'}
+                            colorScheme={pathname === `/analytics/${workflow}` ? (workflow === 'Purchase' ? 'green' : workflow === 'Sales' ? 'blue' : 'purple') : 'gray'}
+                            justifyContent="flex-start"
+                            leftIcon={<Icon as={FiTrendingUp} />}
+                            size="md"
+                            fontWeight={pathname === `/analytics/${workflow}` ? 'bold' : 'normal'}
+                            _hover={{ bg: workflow === 'Purchase' ? 'green.50' : workflow === 'Sales' ? 'blue.50' : 'purple.50' }}
+                            borderTop="1px"
+                            borderColor={workflow === 'Purchase' ? 'green.100' : workflow === 'Sales' ? 'blue.100' : 'purple.100'}
+                            mt={1}
+                          >
+                            <Text flex={1} textAlign="left" isTruncated>
+                              📊 {workflow} Analytics
+                            </Text>
+                          </Button>
+                        )}
                       </React.Fragment>
                     ))}
                   </>
