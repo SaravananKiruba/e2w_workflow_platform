@@ -254,18 +254,25 @@ export default function ModuleBuilderPage() {
   );
 
   return (
-    <Container maxW="container.xl" py={8}>
-      <VStack align="stretch" spacing={6}>
-        <HStack justify="space-between">
-          <Heading size="lg">Module Builder</Heading>
-          <Button leftIcon={<FiPlus />} colorScheme="blue" onClick={handleOpenCreate}>
+    <Container maxW={{ base: "full", md: "container.xl" }} py={{ base: 4, md: 8 }} px={{ base: 3, md: 8 }}>
+      <VStack align="stretch" spacing={{ base: 4, md: 6 }}>
+        <HStack justify="space-between" flexWrap={{ base: "wrap", md: "nowrap" }} gap={{ base: 3, md: 0 }}>
+          <Heading size={{ base: "md", md: "lg" }}>Module Builder</Heading>
+          <Button 
+            leftIcon={<FiPlus />} 
+            colorScheme="blue" 
+            onClick={handleOpenCreate}
+            size={{ base: "sm", md: "md" }}
+            w={{ base: "full", sm: "auto" }}
+          >
             Create Custom Module
           </Button>
         </HStack>
 
-        <Box bg="white" borderRadius="lg" shadow="sm" overflowX="auto">
-          <Table variant="simple">
-            <Thead>
+        <Box bg="white" borderRadius="lg" shadow="sm" overflow="hidden">
+          <Box overflowX="auto">
+            <Table variant="simple" size={{ base: "sm", md: "md" }}>
+              <Thead>
               <Tr>
                 <Th>Module Name</Th>
                 <Th>Display Name</Th>
@@ -307,7 +314,7 @@ export default function ModuleBuilderPage() {
                       </Badge>
                     </Td>
                     <Td>
-                      <HStack spacing={2}>
+                      <Stack direction={{ base: "column", sm: "row" }} spacing={{ base: 1, sm: 2 }}>
                         <IconButton
                           aria-label="Edit module"
                           icon={<FiEdit />}
@@ -326,20 +333,21 @@ export default function ModuleBuilderPage() {
                             onClick={() => handleDelete(module.id)}
                           />
                         )}
-                      </HStack>
+                      </Stack>
                     </Td>
                   </Tr>
                 ))
               )}
             </Tbody>
           </Table>
+          </Box>
         </Box>
       </VStack>
 
       {/* Create/Edit Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="xl">
+      <Modal isOpen={isOpen} onClose={onClose} size={{ base: "full", md: "xl" }}>
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent mx={{ base: 0, md: 4 }}>
           <ModalHeader>
             {editingModule ? 'Edit Module' : 'Create Custom Module'}
           </ModalHeader>
@@ -441,12 +449,14 @@ export default function ModuleBuilderPage() {
             </VStack>
           </ModalBody>
           <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onClose}>
-              Cancel
-            </Button>
-            <Button colorScheme="blue" onClick={handleSubmit}>
-              {editingModule ? 'Update' : 'Create'}
-            </Button>
+            <Stack direction={{ base: "column", sm: "row" }} spacing={3} w={{ base: "full", sm: "auto" }}>
+              <Button variant="ghost" onClick={onClose} w={{ base: "full", sm: "auto" }}>
+                Cancel
+              </Button>
+              <Button colorScheme="blue" onClick={handleSubmit} w={{ base: "full", sm: "auto" }}>
+                {editingModule ? 'Update' : 'Create'}
+              </Button>
+            </Stack>
           </ModalFooter>
         </ModalContent>
       </Modal>

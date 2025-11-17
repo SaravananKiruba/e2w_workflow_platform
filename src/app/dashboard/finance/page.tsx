@@ -231,19 +231,20 @@ export default function FinanceDashboard() {
 
   return (
     <Box minH="100vh" bg={bgColor}>
-      <Container maxW="container.xl" py={8}>
-        <VStack spacing={6} align="stretch">
+      <Container maxW={{ base: "full", md: "container.xl" }} py={{ base: 4, md: 8 }} px={{ base: 3, md: 8 }}>
+        <VStack spacing={{ base: 4, md: 6 }} align="stretch">
           {/* Header */}
-          <Flex justify="space-between" align="center">
+          <Flex justify="space-between" align="center" flexWrap={{ base: "wrap", md: "nowrap" }} gap={{ base: 3, md: 0 }}>
             <VStack align="start" spacing={1}>
-              <Heading size="lg">Finance Dashboard</Heading>
-              <Text color="gray.500">Real-time business intelligence and financial metrics</Text>
+              <Heading size={{ base: "md", md: "lg" }}>Finance Dashboard</Heading>
+              <Text color="gray.500" fontSize={{ base: "sm", md: "md" }}>Real-time business intelligence and financial metrics</Text>
             </VStack>
             <Button
               leftIcon={<Icon as={FiTrendingUp} />}
               colorScheme="blue"
               onClick={fetchMetrics}
-              size="sm"
+              size={{ base: "sm", md: "md" }}
+              w={{ base: "full", sm: "auto" }}
             >
               Refresh
             </Button>

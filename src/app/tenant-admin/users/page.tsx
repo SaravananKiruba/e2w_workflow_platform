@@ -222,12 +222,12 @@ export default function UserManagementPage() {
   };
 
   return (
-    <Box p={8}>
-      <VStack spacing={6} align="stretch">
-        <HStack justify="space-between">
+    <Box p={{ base: 4, md: 8 }}>
+      <VStack spacing={{ base: 4, md: 6 }} align="stretch">
+        <HStack justify="space-between" flexWrap={{ base: "wrap", md: "nowrap" }} gap={{ base: 3, md: 0 }}>
           <Box>
-            <Heading size="lg">User Management</Heading>
-            <Text color="gray.600" mt={1}>
+            <Heading size={{ base: "md", md: "lg" }}>User Management</Heading>
+            <Text color="gray.600" mt={1} fontSize={{ base: "sm", md: "md" }}>
               Manage users in your organization
             </Text>
           </Box>
@@ -235,6 +235,8 @@ export default function UserManagementPage() {
           leftIcon={<Icon as={FiPlus} />}
           colorScheme="purple"
           onClick={openCreateModal}
+          size={{ base: "sm", md: "md" }}
+          w={{ base: "full", sm: "auto" }}
         >
           Add User
         </Button>
@@ -242,8 +244,9 @@ export default function UserManagementPage() {
 
       {/* Users Table */}
       <Box bg="white" borderRadius="lg" border="1px" borderColor="gray.200" overflow="hidden">
-        <Table variant="simple">
-          <Thead bg="gray.50">
+        <Box overflowX="auto">
+          <Table variant="simple" size={{ base: "sm", md: "md" }}>
+            <Thead bg="gray.50">
             <Tr>
               <Th>Name</Th>
               <Th>Email</Th>
@@ -292,20 +295,21 @@ export default function UserManagementPage() {
             ))}
           </Tbody>
         </Table>
+        </Box>
       </Box>
 
       {/* Info Box */}
-      <Box bg="blue.50" p={4} borderRadius="lg" border="1px" borderColor="blue.200">
-        <Text fontSize="sm" color="blue.800">
+      <Box bg="blue.50" p={{ base: 3, md: 4 }} borderRadius="lg" border="1px" borderColor="blue.200">
+        <Text fontSize={{ base: "xs", md: "sm" }} color="blue.800">
           <strong>Note:</strong> Users cannot be deleted, only deactivated. This preserves audit trail and data integrity.
           Staff users can only access core modules. Admins and Managers can access Tenant Admin tools.
         </Text>
       </Box>
 
       {/* Create/Edit Modal */}
-      <Modal isOpen={isOpen} onClose={onClose}>
+      <Modal isOpen={isOpen} onClose={onClose} size={{ base: "full", md: "md" }}>
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent mx={{ base: 0, md: 4 }}>
           <ModalHeader>
             {selectedUser ? 'Edit User' : 'Create New User'}
           </ModalHeader>
