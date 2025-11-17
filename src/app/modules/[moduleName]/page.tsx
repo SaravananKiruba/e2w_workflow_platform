@@ -32,6 +32,18 @@ import {
   TabPanel,
   Badge,
   useColorModeValue,
+  Select,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  Card,
+  CardBody,
+  Stat,
+  StatLabel,
+  StatNumber,
+  Grid,
+  GridItem,
+  Flex,
 } from '@chakra-ui/react';
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
@@ -81,10 +93,14 @@ export default function ModulePage() {
   // State
   const [moduleConfig, setModuleConfig] = useState<ModuleConfig | null>(null);
   const [records, setRecords] = useState<ModuleRecord[]>([]);
+  const [filteredRecords, setFilteredRecords] = useState<ModuleRecord[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<ModuleRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [activeTab, setActiveTab] = useState(0);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
   const {
@@ -99,6 +115,42 @@ export default function ModulePage() {
     loadModuleConfig();
     loadRecords();
   }, [moduleName, tenantId]);
+
+  // Apply filters whenever records or filters change
+  useEffect(() => {
+    if (!moduleConfig) return;
+    
+    let filtered = [...records];
+
+    // Status filter
+    if (statusFilter !== 'All') {
+      filtered = filtered.filter((r) => getFieldValue(r, 'status') === statusFilter);
+    }
+
+    // Tab-based filtering (for Leads: New, Contacted, Qualified, etc.)
+    if (moduleName === 'Leads') {
+      if (activeTab === 1) filtered = filtered.filter((r) => getFieldValue(r, 'status') === 'New');
+      else if (activeTab === 2) filtered = filtered.filter((r) => getFieldValue(r, 'status') === 'Contacted');
+      else if (activeTab === 3) filtered = filtered.filter((r) => getFieldValue(r, 'status') === 'Qualified');
+      else if (activeTab === 4) filtered = filtered.filter((r) => ['Converted', 'Lost'].includes(getFieldValue(r, 'status')));
+    }
+
+    // Search filter (searches across all text/email/phone fields)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((r) => {
+        return moduleConfig.fields.some((field) => {
+          if (['text', 'email', 'phone'].includes(field.dataType)) {
+            const value = getFieldValue(r, field.name);
+            return value && String(value).toLowerCase().includes(query);
+          }
+          return false;
+        });
+      });
+    }
+
+    setFilteredRecords(filtered);
+  }, [records, searchQuery, statusFilter, activeTab, moduleConfig]);
 
   const loadModuleConfig = async () => {
     console.log('[CONFIG SYNC] Loading config for:', moduleName);
@@ -402,223 +454,416 @@ export default function ModulePage() {
     return (record as any)[fieldName];
   };
 
+  // Helper to get status badge color
+  const getStatusColor = (status: string, moduleName: string) => {
+    if (moduleName === 'Leads') {
+      switch (status) {
+        case 'New': return 'blue';
+        case 'Contacted': return 'cyan';
+        case 'Qualified': return 'purple';
+        case 'Converted': return 'green';
+        case 'Lost': return 'red';
+        default: return 'gray';
+      }
+    }
+    // Add more module-specific colors as needed
+    return status === 'Converted' || status === 'Paid' || status === 'Completed' ? 'green' : 'blue';
+  };
+
+  // Helper to get priority color
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'Low': return 'gray';
+      case 'Medium': return 'blue';
+      case 'High': return 'orange';
+      case 'Urgent': return 'red';
+      default: return 'gray';
+    }
+  };
+
   if (loading || !moduleConfig) {
     return (
-      <Container maxW="full" centerContent py={10}>
-        <Spinner />
-      </Container>
+      <AppLayout>
+        <Container maxW="full" centerContent py={10}>
+          <Spinner size="xl" color="primary.500" />
+        </Container>
+      </AppLayout>
     );
   }
 
-  // Get primary display fields (first 3-4 text/lookup fields for table view)
-  const displayFields = moduleConfig.fields.filter(
-    (f) =>
-      ['text', 'email', 'lookup', 'phone', 'currency', 'date'].includes(
-        f.dataType
-      )
-  ).slice(0, 4);
+  // Calculate statistics
+  const getStatistics = () => {
+    const statusField = moduleConfig.fields.find((f) => f.name === 'status');
+    const stats: Record<string, number> = { total: records.length };
+
+    if (statusField && statusField.config?.options) {
+      statusField.config.options.forEach((option: string) => {
+        stats[option] = records.filter((r) => getFieldValue(r, 'status') === option).length;
+      });
+    }
+
+    return stats;
+  };
+
+  const statistics = getStatistics();
+
+  // Get primary display fields - smarter selection for table view
+  const displayFields = moduleConfig.fields.filter((f) => {
+    // Exclude notes/textarea and large fields from table
+    if (f.dataType === 'textarea' || f.dataType === 'table') return false;
+    // Include essential fields
+    return ['text', 'email', 'lookup', 'phone', 'currency', 'date', 'dropdown'].includes(f.dataType);
+  }).slice(0, moduleName === 'Leads' ? 5 : 4); // Show more columns for Leads
+
+  // Show filtered records if any filters are active, otherwise show all records
+  const hasActiveFilters = searchQuery.trim() !== '' || statusFilter !== 'All' || activeTab !== 0;
+  const displayRecords = hasActiveFilters ? filteredRecords : records;
 
   return (
     <AppLayout>
       <Container maxW="full" py={6} px={{ base: 4, md: 6 }}>
-      <VStack align="stretch" spacing={6}>
-        {/* Header */}
-        <HStack justify="space-between" align="center" flexWrap="wrap" gap={3}>
-          <VStack align="start" spacing={1}>
-            <Heading size={{ base: 'md', md: 'lg' }}>{moduleConfig.displayName}</Heading>
-            <Text color="gray.600" fontSize={{ base: 'xs', md: 'sm' }}>
-              {moduleConfig.description || `Manage ${moduleConfig.displayName}`}
-            </Text>
-          </VStack>
-          <Button 
-            colorScheme="primary" 
-            onClick={handleCreateNew}
-            size={{ base: 'sm', md: 'md' }}
-          >
-            ➕ New
-          </Button>
-        </HStack>
+        <VStack align="stretch" spacing={6}>
+          {/* Header */}
+          <Flex justify="space-between" align="center" flexWrap="wrap" gap={4}>
+            <Box>
+              <Heading size="lg" color="primary.700">
+                {moduleConfig.icon} {moduleConfig.displayName}
+              </Heading>
+              <Text color="gray.600" fontSize="sm" mt={1}>
+                {moduleConfig.description || `Manage ${moduleConfig.displayName}`}
+              </Text>
+            </Box>
+            <Button
+              colorScheme="primary"
+              onClick={handleCreateNew}
+              size="md"
+              leftIcon={<Text>➕</Text>}
+            >
+              New {moduleConfig.displayName.replace(/s$/, '')}
+            </Button>
+          </Flex>
 
-        {/* Records - Responsive View */}
-        {records.length > 0 ? (
-          <>
-            {/* Desktop Table */}
-            <TableContainer borderWidth={1} borderRadius="md" display={{ base: 'none', md: 'block' }}>
-              <Table variant="simple" size="sm">
-                <Thead bg="gray.50">
-                  <Tr>
-                    {displayFields.map((field) => (
-                      <Th key={field.name}>{field.label}</Th>
-                    ))}
-                    <Th>Created</Th>
-                    <Th>Actions</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {records.map((record) => (
-                    <Tr key={record.id} _hover={{ bg: 'gray.50' }}>
-                      {displayFields.map((field) => (
-                        <Td key={`${record.id}-${field.name}`}>
-                          {getDisplayValue(field, getFieldValue(record, field.name))}
-                        </Td>
-                      ))}
-                      <Td fontSize="sm">
-                        {new Date(record.createdAt).toLocaleDateString('en-IN')}
-                      </Td>
-                      <Td>
-                        <HStack spacing={2}>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            colorScheme="primary"
-                            onClick={() => handleView(record)}
-                          >
-                            👁️
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          colorScheme="blue"
-                          onClick={() => handleEdit(record)}
-                        >
-                          ✏️
-                        </Button>
-                        {moduleName === 'Leads' && getFieldValue(record, 'status') !== 'Converted' && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            colorScheme="green"
-                            isLoading={isConverting}
-                            title="Convert Lead to Client"
-                            onClick={() => handleConvertLeadToClient(record.id)}
-                          >
-                            ↩️
-                          </Button>
-                        )}
-                        {moduleName === 'Quotations' && getFieldValue(record, 'status') !== 'Converted' && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            colorScheme="green"
-                            isLoading={isConverting}
-                            title="Convert Quotation to Order"
-                            onClick={() => handleConvertQuotationToOrder(record.id)}
-                          >
-                            📋
-                          </Button>
-                        )}
-                        {moduleName === 'Orders' && getFieldValue(record, 'status') !== 'Invoiced' && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            colorScheme="green"
-                            isLoading={isConverting}
-                            title="Convert Order to Invoice"
-                            onClick={() => handleConvertOrderToInvoice(record.id)}
-                          >
-                            🧾
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          colorScheme="red"
-                          onClick={() => handleDelete(record.id)}
-                        >
-                          🗑️
-                        </Button>
-                      </HStack>
-                    </Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </TableContainer>
-
-            {/* Mobile Card View */}
-            <VStack spacing={3} display={{ base: 'flex', md: 'none' }} align="stretch">
-              {records.map((record) => (
-                <Box
-                  key={record.id}
-                  borderWidth={1}
-                  borderRadius="lg"
-                  p={4}
-                  bg="white"
-                  shadow="sm"
-                >
-                  <VStack align="stretch" spacing={3}>
-                    {/* Primary Fields */}
-                    {displayFields.map((field) => (
-                      <Box key={`${record.id}-${field.name}`}>
-                        <Text fontSize="xs" color="gray.500" fontWeight="medium">
-                          {field.label}
-                        </Text>
-                        <Text fontSize="sm" mt={1}>
-                          {getDisplayValue(field, getFieldValue(record, field.name))}
-                        </Text>
-                      </Box>
-                    ))}
-                    
-                    {/* Metadata */}
-                    <Box pt={2} borderTop="1px" borderColor="gray.200">
-                      <Text fontSize="xs" color="gray.500">
-                        Created: {new Date(record.createdAt).toLocaleDateString('en-IN')}
-                      </Text>
-                    </Box>
-
-                    {/* Actions */}
-                    <HStack spacing={2} pt={2} flexWrap="wrap">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        colorScheme="primary"
-                        onClick={() => handleView(record)}
-                        flex={1}
-                        minW="80px"
-                      >
-                        👁️ View
-                      </Button>
-                      <Button
-                        size="sm"
-                        colorScheme="primary"
-                        onClick={() => handleEdit(record)}
-                        flex={1}
-                        minW="80px"
-                      >
-                        ✏️ Edit
-                      </Button>
-                      <IconButton
-                        aria-label="Delete"
-                        icon={<Text>🗑️</Text>}
-                        size="sm"
-                        variant="outline"
-                        colorScheme="red"
-                        onClick={() => handleDelete(record.id)}
-                      />
-                    </HStack>
-                  </VStack>
-                </Box>
+          {/* Statistics Dashboard (for modules with status field) */}
+          {moduleConfig.fields.some((f) => f.name === 'status' && f.config?.options) && (
+            <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)', lg: 'repeat(6, 1fr)' }} gap={4}>
+            <GridItem>
+              <Card bg="white" borderLeft="4px" borderColor="primary.500">
+                <CardBody>
+                  <Stat>
+                    <StatLabel fontSize="sm" color="gray.600">Total</StatLabel>
+                    <StatNumber fontSize="2xl" color="primary.700">{statistics.total}</StatNumber>
+                  </Stat>
+                </CardBody>
+              </Card>
+            </GridItem>
+            {moduleConfig.fields
+              .find((f) => f.name === 'status')
+              ?.config?.options.slice(0, 5)
+              .map((option: string) => (
+                <GridItem key={option}>
+                  <Card bg="white" borderLeft="4px" borderColor={`${getStatusColor(option, moduleName)}.500`}>
+                    <CardBody>
+                      <Stat>
+                        <StatLabel fontSize="sm" color="gray.600">{option}</StatLabel>
+                        <StatNumber fontSize="2xl" color={`${getStatusColor(option, moduleName)}.600`}>
+                          {statistics[option] || 0}
+                        </StatNumber>
+                      </Stat>
+                    </CardBody>
+                  </Card>
+                </GridItem>
               ))}
-            </VStack>
-          </>
-        ) : (
-          <Box
-            p={8}
-            textAlign="center"
-            borderWidth={1}
-            borderRadius="md"
-            color="gray.500"
-          >
-            <Text>No records found. Create your first {moduleConfig.displayName.toLowerCase()}!</Text>
-          </Box>
-        )}
+            </Grid>
+          )}
 
-        {/* Stats */}
-        <HStack spacing={4} fontSize="sm" color="gray.600">
-          <Text>Total Records: <strong>{records.length}</strong></Text>
-          <Text>Last Updated: <strong>{records.length > 0 ? new Date(records[0].updatedAt).toLocaleString('en-IN') : 'N/A'}</strong></Text>
-        </HStack>
-      </VStack>
+          {/* Filters and Search */}
+          <Card bg="white">
+            <CardBody>
+              <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
+                <GridItem>
+                  <InputGroup>
+                    <InputLeftElement pointerEvents="none">
+                      <Text>🔍</Text>
+                    </InputLeftElement>
+                    <Input
+                      placeholder={`Search ${moduleConfig.displayName.toLowerCase()}...`}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </InputGroup>
+                </GridItem>
+                {moduleConfig.fields.some((f) => f.name === 'status') && (
+                  <GridItem>
+                    <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                      <option value="All">All Status</option>
+                      {moduleConfig.fields
+                        .find((f) => f.name === 'status')
+                        ?.config?.options.map((option: string) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                    </Select>
+                  </GridItem>
+                )}
+              </Grid>
+            </CardBody>
+          </Card>
+
+          {/* Tabs for Pipeline (Leads module) */}
+          {moduleName === 'Leads' && (
+            <Tabs index={activeTab} onChange={setActiveTab} colorScheme="primary" variant="enclosed">
+              <TabList>
+                <Tab>All ({statistics.total})</Tab>
+                <Tab>New ({statistics.New || 0})</Tab>
+                <Tab>Contacted ({statistics.Contacted || 0})</Tab>
+                <Tab>Qualified ({statistics.Qualified || 0})</Tab>
+                <Tab>Closed ({(statistics.Converted || 0) + (statistics.Lost || 0)})</Tab>
+              </TabList>
+            </Tabs>
+          )}
+
+          {/* Records Table */}
+          {displayRecords.length > 0 ? (
+            <Card bg="white">
+              <CardBody p={0}>
+                <TableContainer>
+                  <Table variant="simple" size="md">
+                    <Thead bg="gray.50">
+                      <Tr>
+                        {displayFields.map((field) => (
+                          <Th key={field.name} color="gray.700">{field.label}</Th>
+                        ))}
+                        <Th color="gray.700">Created</Th>
+                        <Th color="gray.700">Actions</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {displayRecords.map((record) => (
+                        <Tr key={record.id} _hover={{ bg: 'gray.50' }}>
+                          {displayFields.map((field) => {
+                            const value = getFieldValue(record, field.name);
+                            return (
+                              <Td key={`${record.id}-${field.name}`}>
+                                {field.name === 'status' ? (
+                                  <Badge colorScheme={getStatusColor(value, moduleName)}>
+                                    {value || '-'}
+                                  </Badge>
+                                ) : field.name === 'priority' ? (
+                                  <Badge colorScheme={getPriorityColor(value)}>
+                                    {value || '-'}
+                                  </Badge>
+                                ) : field.name === 'name' || field.name.toLowerCase().includes('name') ? (
+                                  <Text fontWeight="medium" color="primary.700">
+                                    {getDisplayValue(field, value)}
+                                  </Text>
+                                ) : field.dataType === 'currency' ? (
+                                  <Text fontWeight="medium" color="accent.700">
+                                    {getDisplayValue(field, value)}
+                                  </Text>
+                                ) : (
+                                  <Text color="gray.600">{getDisplayValue(field, value)}</Text>
+                                )}
+                              </Td>
+                            );
+                          })}
+                          <Td fontSize="sm" color="gray.500">
+                            {new Date(record.createdAt).toLocaleDateString('en-IN')}
+                          </Td>
+                          <Td>
+                            <HStack spacing={1}>
+                              <IconButton
+                                aria-label="View"
+                                icon={<Text>👁️</Text>}
+                                size="sm"
+                                variant="ghost"
+                                colorScheme="blue"
+                                onClick={() => handleView(record)}
+                              />
+                              <IconButton
+                                aria-label="Edit"
+                                icon={<Text>✏️</Text>}
+                                size="sm"
+                                variant="ghost"
+                                colorScheme="primary"
+                                onClick={() => handleEdit(record)}
+                              />
+                              {moduleName === 'Leads' && getFieldValue(record, 'status') !== 'Converted' && (
+                                <IconButton
+                                  aria-label="Convert to Client"
+                                  icon={<Text>✓</Text>}
+                                  size="sm"
+                                  variant="ghost"
+                                  colorScheme="green"
+                                  isLoading={isConverting}
+                                  title="Convert Lead to Client"
+                                  onClick={() => handleConvertLeadToClient(record.id)}
+                                />
+                              )}
+                              {moduleName === 'Quotations' && getFieldValue(record, 'status') !== 'Converted' && (
+                                <IconButton
+                                  aria-label="Convert to Order"
+                                  icon={<Text>📋</Text>}
+                                  size="sm"
+                                  variant="ghost"
+                                  colorScheme="green"
+                                  isLoading={isConverting}
+                                  title="Convert Quotation to Order"
+                                  onClick={() => handleConvertQuotationToOrder(record.id)}
+                                />
+                              )}
+                              {moduleName === 'Orders' && getFieldValue(record, 'status') !== 'Invoiced' && (
+                                <IconButton
+                                  aria-label="Convert to Invoice"
+                                  icon={<Text>🧾</Text>}
+                                  size="sm"
+                                  variant="ghost"
+                                  colorScheme="green"
+                                  isLoading={isConverting}
+                                  title="Convert Order to Invoice"
+                                  onClick={() => handleConvertOrderToInvoice(record.id)}
+                                />
+                              )}
+                              <IconButton
+                                aria-label="Delete"
+                                icon={<Text>🗑️</Text>}
+                                size="sm"
+                                variant="ghost"
+                                colorScheme="red"
+                                onClick={() => handleDelete(record.id)}
+                              />
+                            </HStack>
+                          </Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                </TableContainer>
+              </CardBody>
+            </Card>
+          ) : (
+            <Card bg="white">
+              <CardBody textAlign="center" py={10}>
+                <Text fontSize="lg" color="gray.500">
+                  {searchQuery || statusFilter !== 'All' ? 'No matching records found' : 'No records found'}
+                </Text>
+                <Text fontSize="sm" color="gray.400" mt={2}>
+                  {searchQuery || statusFilter !== 'All'
+                    ? 'Try adjusting your filters'
+                    : `Create your first ${moduleConfig.displayName.toLowerCase()} to get started`}
+                </Text>
+              </CardBody>
+            </Card>
+          )}
+        </VStack>
+      </Container>
+
+      {/* Create/Edit Modal */}
+      <Modal isOpen={isOpen} onClose={onClose} size="2xl">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader bg="primary.500" color="white">
+            {selectedRecord ? `Edit ${moduleConfig.displayName}` : `New ${moduleConfig.displayName}`}
+          </ModalHeader>
+          <ModalBody py={6}>
+            <DynamicForm
+              ref={formRef}
+              config={moduleConfig}
+              initialData={selectedRecord ? (selectedRecord.data && typeof selectedRecord.data === 'object' && !Array.isArray(selectedRecord.data) ? selectedRecord.data : selectedRecord) : {}}
+              onSubmit={handleFormSubmit}
+            />
+          </ModalBody>
+          <ModalFooter bg="gray.50">
+            <HStack spacing={3}>
+              <Button variant="ghost" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                colorScheme="primary"
+                isLoading={isSubmitting}
+                onClick={() => {
+                  // Trigger form submission via ref
+                  formRef.current?.submit();
+                }}
+              >
+                {selectedRecord ? 'Update' : 'Create'}
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* View Detail Modal */}
+      <Modal isOpen={isDetailOpen} onClose={onDetailClose} size="2xl">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader bg="primary.500" color="white">
+            {moduleConfig.displayName} Details
+          </ModalHeader>
+          <ModalBody py={6}>
+            {selectedRecord && (
+              <VStack align="stretch" spacing={4}>
+                <Grid templateColumns="repeat(2, 1fr)" gap={4}>
+                  {moduleConfig.fields.map((field) => {
+                    const value = getFieldValue(selectedRecord, field.name);
+                    if (!value && value !== 0) return null;
+                    
+                    return (
+                      <GridItem key={field.name} colSpan={field.dataType === 'textarea' ? 2 : 1}>
+                        <Box>
+                          <Text fontWeight="semibold" fontSize="sm" color="gray.600" mb={1}>
+                            {field.label}
+                          </Text>
+                          {field.name === 'status' ? (
+                            <Badge colorScheme={getStatusColor(value, moduleName)} fontSize="sm">
+                              {value}
+                            </Badge>
+                          ) : field.name === 'priority' ? (
+                            <Badge colorScheme={getPriorityColor(value)} fontSize="sm">
+                              {value}
+                            </Badge>
+                          ) : field.dataType === 'currency' ? (
+                            <Text fontSize="md" fontWeight="medium" color="accent.700">
+                              ₹{new Intl.NumberFormat('en-IN').format(value)}
+                            </Text>
+                          ) : (
+                            <Text fontSize="md">{value}</Text>
+                          )}
+                        </Box>
+                      </GridItem>
+                    );
+                  })}
+                </Grid>
+                
+                <Box pt={4} borderTop="1px" borderColor="gray.200">
+                  <Text fontSize="xs" color="gray.500">
+                    Created: {new Date(selectedRecord.createdAt).toLocaleString('en-IN')}
+                  </Text>
+                  <Text fontSize="xs" color="gray.500">
+                    Last Updated: {new Date(selectedRecord.updatedAt).toLocaleString('en-IN')}
+                  </Text>
+                </Box>
+              </VStack>
+            )}
+          </ModalBody>
+          <ModalFooter bg="gray.50">
+            <HStack spacing={3}>
+              <Button
+                colorScheme="primary"
+                onClick={() => {
+                  handleEdit(selectedRecord!);
+                  onDetailClose();
+                }}
+              >
+                Edit
+              </Button>
+              <Button variant="ghost" onClick={onDetailClose}>
+                Close
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       {/* Create/Edit Modal */}
       <Modal isOpen={isOpen} onClose={onClose} size="2xl">
@@ -679,10 +924,10 @@ export default function ModulePage() {
               </VStack>
             )}
           </ModalBody>
-          <ModalFooter>
-            <HStack spacing={2}>
+          <ModalFooter bg="gray.50">
+            <HStack spacing={3}>
               <Button
-                colorScheme="blue"
+                colorScheme="primary"
                 onClick={() => {
                   handleEdit(selectedRecord!);
                   onDetailClose();
@@ -697,7 +942,6 @@ export default function ModulePage() {
           </ModalFooter>
         </ModalContent>
       </Modal>
-    </Container>
     </AppLayout>
   );
 }

@@ -96,6 +96,21 @@ async function seedLeadsModule() {
         placeholder: '0.00',
       },
       {
+        name: 'assignedTo',
+        label: 'Assigned To',
+        dataType: 'text',
+        uiType: 'textbox',
+        isRequired: false,
+        placeholder: 'Sales person name',
+      },
+      {
+        name: 'nextFollowUp',
+        label: 'Next Follow-up Date',
+        dataType: 'date',
+        uiType: 'date',
+        isRequired: false,
+      },
+      {
         name: 'notes',
         label: 'Notes',
         dataType: 'textarea',
