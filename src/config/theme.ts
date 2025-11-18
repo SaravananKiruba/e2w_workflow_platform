@@ -5,110 +5,110 @@ const config: ThemeConfig = {
   useSystemColorMode: false,
 };
 
-// Custom color palette based on: #0485e2, #0458c9, #46d3c0, #566b17, #1a260b
+// Custom color palette based on: #ce9466, #4d2b1e, #a06a4a, #281915, #5d4035
 export const theme = extendTheme({
   config,
   colors: {
-    // Primary Blue - Main brand color (#0485e2)
+    // Primary Tan - Main brand color (#ce9466)
     brand: {
-      50: '#e6f5fd',
-      100: '#b8e3f9',
-      200: '#8ad1f5',
-      300: '#5cbff1',
-      400: '#2eaded',
-      500: '#0485e2',  // Main brand color
-      600: '#036bb5',
-      700: '#025088',
-      800: '#02365a',
-      900: '#011b2d',
+      50: '#faf6f2',
+      100: '#f0e6d9',
+      200: '#e5d6bf',
+      300: '#dbc6a6',
+      400: '#d0b68c',
+      500: '#ce9466',  // Main brand color
+      600: '#b87a52',
+      700: '#a1613d',
+      800: '#8b4729',
+      900: '#742e14',
     },
     primary: {
-      50: '#e6f5fd',
-      100: '#b8e3f9',
-      200: '#8ad1f5',
-      300: '#5cbff1',
-      400: '#2eaded',
-      500: '#0485e2',  // Main primary color
-      600: '#036bb5',
-      700: '#025088',
-      800: '#02365a',
-      900: '#011b2d',
+      50: '#faf6f2',
+      100: '#f0e6d9',
+      200: '#e5d6bf',
+      300: '#dbc6a6',
+      400: '#d0b68c',
+      500: '#ce9466',  // Main primary color
+      600: '#b87a52',
+      700: '#a1613d',
+      800: '#8b4729',
+      900: '#742e14',
     },
-    // Secondary Blue - Darker accent (#0458c9)
+    // Secondary Brown - Dark chocolate (#4d2b1e)
     secondary: {
-      50: '#e6f0fc',
-      100: '#b8d5f7',
-      200: '#8abaf2',
-      300: '#5c9fed',
-      400: '#2e84e8',
-      500: '#0458c9',  // Secondary color
-      600: '#0347a1',
-      700: '#033579',
-      800: '#022351',
-      900: '#011228',
+      50: '#f2ede9',
+      100: '#d9ccc3',
+      200: '#c0ab9d',
+      300: '#a78a77',
+      400: '#8e6951',
+      500: '#4d2b1e',  // Secondary color
+      600: '#3e2218',
+      700: '#2f1912',
+      800: '#20110c',
+      900: '#110806',
     },
-    // Accent Cyan - Bright highlight (#46d3c0)
+    // Accent Mid Brown - Warm highlight (#a06a4a)
     accent: {
-      50: '#ebfaf7',
-      100: '#c5f0e8',
-      200: '#9fe6d9',
-      300: '#79dcca',
-      400: '#53d2bb',
-      500: '#46d3c0',  // Accent color
-      600: '#38a99a',
-      700: '#2a7f73',
-      800: '#1c544d',
-      900: '#0e2a26',
+      50: '#f7f2ed',
+      100: '#e7d9ce',
+      200: '#d7c0af',
+      300: '#c7a790',
+      400: '#b78e71',
+      500: '#a06a4a',  // Accent color
+      600: '#80553b',
+      700: '#60402c',
+      800: '#402b1d',
+      900: '#20150e',
     },
-    // Olive Green - Natural earth tone (#566b17)
+    // Deep Brown - Darkest base (#281915)
     olive: {
-      50: '#f3f5e9',
-      100: '#dce2c0',
-      200: '#c5cf97',
-      300: '#aebc6e',
-      400: '#97a945',
-      500: '#566b17',  // Olive color
-      600: '#455613',
-      700: '#34400e',
-      800: '#232b0a',
-      900: '#121505',
+      50: '#ede9e8',
+      100: '#cfc3c0',
+      200: '#b19d98',
+      300: '#937770',
+      400: '#755148',
+      500: '#5d4035',  // Rich brown
+      600: '#4a332a',
+      700: '#37261f',
+      800: '#241a15',
+      900: '#110d0a',
     },
-    // Dark Base - Deep background (#1a260b)
+    // Almost Black - Deep background (#281915)
     dark: {
-      50: '#e9ebe7',
-      100: '#c1c6bb',
-      200: '#99a18f',
-      300: '#717c63',
-      400: '#495737',
-      500: '#1a260b',  // Dark base color
-      600: '#151e09',
-      700: '#101707',
-      800: '#0b0f04',
-      900: '#050802',
+      50: '#ede9e7',
+      100: '#cfc3bf',
+      200: '#b19d97',
+      300: '#93776f',
+      400: '#755147',
+      500: '#281915',  // Dark base color
+      600: '#201411',
+      700: '#180f0d',
+      800: '#100a08',
+      900: '#080504',
     },
-    // Success - Enhanced with olive tones
+    // Success - Enhanced with brown tones
     success: {
-      50: '#f0f8ea',
-      100: '#d6edc4',
-      200: '#bce19e',
-      300: '#a2d678',
-      400: '#88ca52',
-      500: '#6ebe2c',
-      600: '#566b17',
-      700: '#45560f',
-      800: '#34400e',
-      900: '#232b0a',
+      50: '#f7f2ed',
+      100: '#e7d9ce',
+      200: '#d7c0af',
+      300: '#c7a790',
+      400: '#b78e71',
+      500: '#a06a4a',
+      600: '#80553b',
+      700: '#60402c',
+      800: '#402b1d',
+      900: '#20150e',
     },
-    // Warning - Accent cyan variations
+    // Warning - Tan variations
     warning: {
-      50: '#ebfaf7',
-      100: '#c5f0e8',
-      200: '#9fe6d9',
-      300: '#79dcca',
-      400: '#53d2bb',
-      500: '#46d3c0',
-      600: '#38a99a',
-      700: '#2a7f73',
+      50: '#faf6f2',
+      100: '#f0e6d9',
+      200: '#e5d6bf',
+      300: '#dbc6a6',
+      400: '#d0b68c',
+      500: '#ce9466',
+      600: '#b87a52',
+      700: '#a1613d',
     },
     // Danger - Secondary blue tinted red
     danger: {
@@ -121,16 +121,16 @@ export const theme = extendTheme({
       600: '#c72952',
       700: '#a81e42',
     },
-    // Info - Primary blue
+    // Info - Primary tan
     info: {
-      50: '#e6f5fd',
-      100: '#b8e3f9',
-      200: '#8ad1f5',
-      300: '#5cbff1',
-      400: '#2eaded',
-      500: '#0485e2',
-      600: '#036bb5',
-      700: '#025088',
+      50: '#faf6f2',
+      100: '#f0e6d9',
+      200: '#e5d6bf',
+      300: '#dbc6a6',
+      400: '#d0b68c',
+      500: '#ce9466',
+      600: '#b87a52',
+      700: '#a1613d',
     },
   },
   fonts: {
@@ -140,8 +140,8 @@ export const theme = extendTheme({
   styles: {
     global: {
       body: {
-        bg: 'gray.50',
-        color: 'dark.800',
+        bg: '#faf6f2',
+        color: 'dark.500',
       },
       '*::placeholder': {
         color: 'gray.400',
