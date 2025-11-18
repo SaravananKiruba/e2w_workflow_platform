@@ -81,6 +81,20 @@ export default function ModuleFormView({
       // ✅ EPIC 1.1: Auto-refresh dropdowns
       invalidateLookups(moduleName, tenantId);
       
+      // Invalidate related modules to ensure consistency
+      const relatedModules: Record<string, string[]> = {
+        'Clients': ['Quotations', 'Orders', 'Invoices', 'Payments'],
+        'Products': ['Quotations', 'Orders', 'Invoices', 'PurchaseOrders', 'PurchaseRequisitions'],
+        'Vendors': ['PurchaseOrders', 'PurchaseRequisitions', 'Payments'],
+        'Leads': ['Clients'],
+      };
+      
+      if (relatedModules[moduleName]) {
+        relatedModules[moduleName].forEach(relatedModule => {
+          invalidateLookups(relatedModule, tenantId);
+        });
+      }
+      
       // Handle special cases (e.g., Lead -> Client conversion)
       if (moduleName === 'Leads' && data.status === 'Converted') {
         invalidateLookups('Clients', tenantId);

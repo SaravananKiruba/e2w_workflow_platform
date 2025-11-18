@@ -117,9 +117,11 @@ export default function UnifiedModulePage() {
 
       if (!response.ok) throw new Error('Failed to load record');
 
-      const record = await response.json();
-      const data = record.data || record;
-      setEditData(data);
+      const result = await response.json();
+      // API returns { record } wrapper
+      const record = result.record || result;
+      console.log('[UnifiedModulePage] Loaded record data:', record);
+      setEditData(record);
     } catch (error) {
       console.error('Error loading record:', error);
       toast({

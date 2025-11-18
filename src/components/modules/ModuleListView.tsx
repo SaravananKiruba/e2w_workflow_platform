@@ -79,6 +79,7 @@ export default function ModuleListView({
   const [statusFilter, setStatusFilter] = useState('All');
   const [viewMode, setViewMode] = useState<'table' | 'tiles'>(defaultViewMode);
   const [activeTab, setActiveTab] = useState(0);
+  const [isConverting, setIsConverting] = useState(false);
 
   // Load records
   useEffect(() => {
@@ -126,15 +127,17 @@ export default function ModuleListView({
       filtered = filtered.filter(r => getFieldValue(r, 'status') === statusFilter);
     }
 
-    // Tab-based filtering (for Leads)
+    // Tab-based filtering (for Leads - use dynamic status from config)
     if (moduleName === 'Leads') {
-      const statusMap = ['All', 'New', 'Contacted', 'Qualified', 'Converted/Lost'];
+      // Get status field configuration to find available statuses
+      const statusField = moduleConfig.fields.find(f => f.name === 'status');
+      const statusOptions = statusField?.config?.options || [];
+      
+      // Build dynamic status map from field config
+      const statusMap = ['All', ...statusOptions.map((opt: any) => opt.label || opt.value)];
       const tabStatus = statusMap[activeTab];
-      if (tabStatus === 'Converted/Lost') {
-        filtered = filtered.filter(r => 
-          ['Converted', 'Lost'].includes(getFieldValue(r, 'status'))
-        );
-      } else if (tabStatus !== 'All') {
+      
+      if (tabStatus && tabStatus !== 'All') {
         filtered = filtered.filter(r => getFieldValue(r, 'status') === tabStatus);
       }
     }
@@ -192,6 +195,63 @@ export default function ModuleListView({
     }
   };
 
+  const handleConvert = async (recordId: string, conversionType: string) => {
+    const confirmMessages: Record<string, string> = {
+      'lead-to-client': 'Convert this Lead to a Client?',
+      'quotation-to-order': 'Convert this Quotation to an Order?',
+      'order-to-invoice': 'Convert this Order to an Invoice?',
+    };
+
+    if (!confirm(confirmMessages[conversionType] || 'Convert this record?')) return;
+
+    try {
+      setIsConverting(true);
+      const response = await fetch(`/api/conversions/${conversionType}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          conversionType === 'lead-to-client'
+            ? { leadId: recordId }
+            : conversionType === 'quotation-to-order'
+            ? { quotationId: recordId }
+            : { orderId: recordId }
+        ),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Conversion failed');
+      }
+
+      const result = await response.json();
+
+      toast({
+        title: 'Success',
+        description:
+          conversionType === 'lead-to-client'
+            ? 'Lead converted to Client successfully'
+            : conversionType === 'quotation-to-order'
+            ? 'Quotation converted to Order successfully'
+            : 'Order converted to Invoice successfully',
+        status: 'success',
+        duration: 4000,
+      });
+
+      // Reload records to reflect updated status
+      loadRecords();
+    } catch (error) {
+      console.error('Conversion error:', error);
+      toast({
+        title: 'Conversion Failed',
+        description: error instanceof Error ? error.message : 'Failed to convert record',
+        status: 'error',
+        duration: 4000,
+      });
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
   if (loading) {
     return (
       <Flex justify="center" align="center" minH="400px">
@@ -200,17 +260,28 @@ export default function ModuleListView({
     );
   }
 
+  // Get dynamic status options for Leads module
+  const getLeadStatusTabs = () => {
+    if (moduleName !== 'Leads') return null;
+    
+    const statusField = moduleConfig.fields.find(f => f.name === 'status');
+    const statusOptions = statusField?.config?.options || [];
+    
+    return statusOptions.map((opt: any) => opt.label || opt.value);
+  };
+
+  const leadStatusTabs = getLeadStatusTabs();
+
   return (
     <VStack align="stretch" spacing={4}>
-      {/* Tabs for Leads module */}
-      {moduleName === 'Leads' && (
+      {/* Tabs for Leads module - Dynamic from config */}
+      {moduleName === 'Leads' && leadStatusTabs && leadStatusTabs.length > 0 && (
         <Tabs index={activeTab} onChange={setActiveTab} colorScheme="primary">
           <TabList>
             <Tab>All ({records.length})</Tab>
-            <Tab>New</Tab>
-            <Tab>Contacted</Tab>
-            <Tab>Qualified</Tab>
-            <Tab>Converted/Lost</Tab>
+            {leadStatusTabs.map((status: string) => (
+              <Tab key={status}>{status}</Tab>
+            ))}
           </TabList>
         </Tabs>
       )}
@@ -237,15 +308,9 @@ export default function ModuleListView({
             <option value="All">All Status</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
-            {moduleName === 'Leads' && (
-              <>
-                <option value="New">New</option>
-                <option value="Contacted">Contacted</option>
-                <option value="Qualified">Qualified</option>
-                <option value="Converted">Converted</option>
-                <option value="Lost">Lost</option>
-              </>
-            )}
+            {moduleName === 'Leads' && leadStatusTabs && leadStatusTabs.map((status: string) => (
+              <option key={status} value={status}>{status}</option>
+            ))}
           </Select>
         </HStack>
 
@@ -304,6 +369,8 @@ export default function ModuleListView({
           onView={onView}
           onEdit={(record) => onEdit(record.id)}
           onDelete={handleDelete}
+          onConvert={handleConvert}
+          isConverting={isConverting}
         />
       )}
     </VStack>

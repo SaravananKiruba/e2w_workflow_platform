@@ -95,20 +95,33 @@ export default function ModuleTilesView({
     }
   };
 
-  // Helper to get status badge color
+  // Helper to get status badge color (dynamic from config)
   const getStatusColor = (status: any, moduleName: string) => {
     const statusStr = typeof status === 'object' ? (status?.label || status?.value || '') : (status || '');
     
     if (moduleName === 'Leads') {
-      switch (statusStr) {
-        case 'New': return 'blue';
-        case 'Contacted': return 'cyan';
-        case 'Qualified': return 'purple';
-        case 'Converted': return 'green';
-        case 'Lost': return 'red';
-        default: return 'gray';
+      // Get status field config to check for color settings
+      const statusField = moduleConfig.fields.find(f => f.name === 'status');
+      const statusOption = statusField?.config?.options?.find((opt: any) => 
+        (opt.label || opt.value) === statusStr
+      );
+      
+      // Use configured color if available, otherwise use defaults
+      if (statusOption?.color) {
+        return statusOption.color;
       }
+      
+      // Fallback to smart defaults based on status name
+      const lowerStatus = statusStr.toLowerCase();
+      if (lowerStatus.includes('convert') || lowerStatus.includes('won')) return 'green';
+      if (lowerStatus.includes('lost') || lowerStatus.includes('reject')) return 'red';
+      if (lowerStatus.includes('qualify') || lowerStatus.includes('progress')) return 'purple';
+      if (lowerStatus.includes('contact')) return 'cyan';
+      if (lowerStatus.includes('new')) return 'blue';
+      return 'gray';
     }
+    
+    // Generic status colors for other modules
     return statusStr === 'Converted' || statusStr === 'Paid' || statusStr === 'Completed' ? 'green' : 'blue';
   };
 
