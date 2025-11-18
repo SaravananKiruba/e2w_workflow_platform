@@ -108,6 +108,9 @@ model ModuleConfiguration {
   layouts     String?  // JSON: UI layout configuration
   validations String?  // JSON: Validation rules
   
+  // Module-specific settings (auto-numbering, duplicate rules, assignment, scoring, etc.)
+  moduleSettings String? // JSON: Module behavior configuration
+  
   // Filter configuration
   searchableFields String? // JSON: Array of field names that support search
   filterConfig     String? // JSON: Filter configuration
@@ -286,14 +289,26 @@ model Lead {
   tenantId        String
   
   // Core indexed fields (frequently queried)
+  leadNumber      String?  // Auto-generated: LD-00001
   name            String
   email           String?
   phone           String?
   company         String?
   source          String?  // Google Ads, Meta Ads, LinkedIn, Referral, etc.
   status          String   @default("New") // New, Contacted, Qualified, Converted, Lost
+  leadStage       String?  // Pipeline stage tracking
   priority        String?  // Low, Medium, High, Urgent
+  leadScore       Int      @default(0) // Calculated priority score
   expectedValue   Float?
+  
+  // Assignment tracking
+  assignedTo      String?  // User ID
+  assignedBy      String?  // User ID who assigned
+  assignedAt      DateTime?
+  
+  // Activity tracking
+  lastContactedAt DateTime?
+  nextFollowUpAt  DateTime?
   
   // Custom/dynamic fields (JSON for flexibility)
   customData      String?  // JSON: Additional custom fields
@@ -314,7 +329,141 @@ model Lead {
   @@index([tenantId, phone])
   @@index([tenantId, createdAt])
   @@index([tenantId, status, createdAt])
+  @@index([tenantId, assignedTo])
+  @@index([tenantId, leadNumber])
+  @@index([tenantId, nextFollowUpAt])
   @@map("leads")
+}
+
+// ============================================
+// GENERIC RECORD FEATURES (for ANY module)
+// ============================================
+
+model RecordActivity {
+  id            String   @id @default(cuid())
+  tenantId      String
+  moduleName    String   // "Leads", "Clients", "Orders", etc.
+  recordId      String   // DynamicRecord.id
+  
+  activityType  String   // call, email, meeting, status_change, field_update, task_completed
+  title         String
+  description   String?
+  
+  // Call specific
+  callDuration  Int?     // seconds
+  callRecording String?  // URL
+  callStatus    String?  // completed, missed, voicemail
+  
+  // Email specific
+  emailSubject  String?
+  emailBody     String?
+  
+  // Change tracking
+  fieldName     String?
+  oldValue      String?
+  newValue      String?
+  
+  metadata      String?  // JSON: Additional flexible data
+  
+  createdAt     DateTime @default(now())
+  createdBy     String?
+  
+  @@index([tenantId, moduleName, recordId, createdAt])
+  @@index([tenantId, activityType])
+  @@map("record_activities")
+}
+
+model RecordNote {
+  id          String   @id @default(cuid())
+  tenantId    String
+  moduleName  String   // "Leads", "Clients", "Orders", etc.
+  recordId    String   // DynamicRecord.id
+  
+  content     String   // Rich text content
+  isPinned    Boolean  @default(false)
+  mentions    String?  // JSON: Array of user IDs mentioned
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  
+  @@index([tenantId, moduleName, recordId, createdAt])
+  @@map("record_notes")
+}
+
+model RecordTask {
+  id            String   @id @default(cuid())
+  tenantId      String
+  moduleName    String   // "Leads", "Clients", "Orders", etc.
+  recordId      String   // DynamicRecord.id
+  
+  title         String
+  description   String?
+  taskType      String?  // follow_up_call, send_email, schedule_demo, etc.
+  
+  dueDate       DateTime?
+  dueTime       String?  // HH:MM:SS format
+  priority      String   @default("medium") // low, medium, high, urgent
+  
+  status        String   @default("pending") // pending, completed, cancelled, overdue
+  completedAt   DateTime?
+  completedBy   String?
+  
+  assignedTo    String?  // User ID
+  reminder      Boolean  @default(true)
+  reminderSent  Boolean  @default(false)
+  
+  metadata      String?  // JSON: Additional task data
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdBy     String?
+  
+  @@index([tenantId, assignedTo, status])
+  @@index([tenantId, moduleName, recordId])
+  @@index([tenantId, dueDate, status])
+  @@map("record_tasks")
+}
+
+model LeadAssignmentRule {
+  id              String   @id @default(cuid())
+  tenantId        String
+  
+  name            String
+  description     String?
+  priority        Int      @default(0) // Higher priority rules execute first
+  
+  ruleType        String   // round_robin, load_based, territory, source_based, value_based, manual
+  conditions      String?  // JSON: Rule conditions
+  assignmentLogic String   // JSON: Assignment logic
+  
+  isActive        Boolean  @default(true)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       String?
+  
+  @@index([tenantId, isActive, priority])
+  @@map("lead_assignment_rules")
+}
+
+model LeadDuplicateRule {
+  id                String   @id @default(cuid())
+  tenantId          String
+  
+  name              String
+  checkFields       String   // JSON: Array of fields to check ['email', 'phone']
+  matchCriteria     String   // exact, fuzzy, partial
+  action            String   // block, warn, merge, skip
+  
+  isActive          Boolean  @default(true)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  createdBy         String?
+  
+  @@index([tenantId, isActive])
+  @@map("lead_duplicate_rules")
 }
 
 model Client {

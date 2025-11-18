@@ -22,16 +22,94 @@ export async function seedDefaultModules(prisma: PrismaClient, tenantId: string,
       isCustomModule: false,
       isCustomized: false,
       fields: JSON.stringify([
-        { name: 'leadNumber', label: 'Lead Number', dataType: 'string', uiType: 'text', required: true, searchable: true },
-        { name: 'name', label: 'Name', dataType: 'string', uiType: 'text', required: true, searchable: true },
-        { name: 'email', label: 'Email', dataType: 'string', uiType: 'email', required: false, searchable: true },
-        { name: 'phone', label: 'Phone', dataType: 'string', uiType: 'phone', required: false, searchable: true },
-        { name: 'company', label: 'Company', dataType: 'string', uiType: 'text', required: false, searchable: true },
-        { name: 'source', label: 'Source', dataType: 'string', uiType: 'dropdown', required: false, options: ['Website', 'Referral', 'Social Media', 'Cold Call', 'Event', 'Other'] },
-        { name: 'status', label: 'Status', dataType: 'string', uiType: 'dropdown', required: true, options: ['New', 'Contacted', 'Qualified', 'Proposal', 'Negotiation', 'Won', 'Lost'], defaultValue: 'New' },
-        { name: 'estimatedValue', label: 'Estimated Value', dataType: 'number', uiType: 'currency', required: false },
-        { name: 'notes', label: 'Notes', dataType: 'text', uiType: 'textarea', required: false },
+        { name: 'leadNumber', label: 'Lead ID', dataType: 'string', uiType: 'text', isRequired: false, isReadOnly: true, helpText: 'Auto-generated unique identifier', searchable: true },
+        { name: 'name', label: 'Lead Name', dataType: 'string', uiType: 'text', isRequired: true, searchable: true },
+        { name: 'email', label: 'Email', dataType: 'string', uiType: 'email', isRequired: false, searchable: true, validation: [{ type: 'email', message: 'Invalid email format' }] },
+        { name: 'phone', label: 'Phone', dataType: 'string', uiType: 'phone', isRequired: false, searchable: true, config: { enableClickToCall: true } },
+        { name: 'company', label: 'Company', dataType: 'string', uiType: 'text', isRequired: false, searchable: true },
+        { name: 'source', label: 'Lead Source', dataType: 'string', uiType: 'dropdown', isRequired: false, config: { options: [
+          { label: 'Website', value: 'website' },
+          { label: 'Referral', value: 'referral' },
+          { label: 'Social Media', value: 'social_media' },
+          { label: 'Cold Call', value: 'cold_call' },
+          { label: 'Event', value: 'event' },
+          { label: 'Google Ads', value: 'google_ads' },
+          { label: 'LinkedIn', value: 'linkedin' },
+          { label: 'Other', value: 'other' }
+        ]}},
+        { name: 'status', label: 'Lead Status', dataType: 'string', uiType: 'dropdown', isRequired: true, defaultValue: 'New', config: { options: [
+          { label: 'New', value: 'New' },
+          { label: 'Follow-up', value: 'Follow-up' },
+          { label: 'Contacted', value: 'Contacted' },
+          { label: 'Qualified', value: 'Qualified' },
+          { label: 'Proposal Sent', value: 'Proposal' },
+          { label: 'Negotiation', value: 'Negotiation' },
+          { label: 'Converted', value: 'Converted' },
+          { label: 'Lost', value: 'Lost' },
+          { label: 'Unqualified', value: 'Unqualified' },
+          { label: 'Unreachable', value: 'Unreachable' }
+        ]}},
+        { name: 'priority', label: 'Priority', dataType: 'string', uiType: 'dropdown', isRequired: false, config: { options: [
+          { label: 'Hot', value: 'Hot' },
+          { label: 'Warm', value: 'Warm' },
+          { label: 'Cold', value: 'Cold' }
+        ]}, helpText: 'Auto-calculated based on scoring rules' },
+        { name: 'leadScore', label: 'Lead Score', dataType: 'number', uiType: 'number', isRequired: false, isReadOnly: true, helpText: 'System calculated priority score' },
+        { name: 'expectedValue', label: 'Estimated Value', dataType: 'number', uiType: 'currency', isRequired: false, config: { currency: 'INR', decimals: 2 } },
+        { name: 'assignedTo', label: 'Assigned To', dataType: 'reference', uiType: 'lookup', isRequired: false, config: { targetModule: 'Users', displayField: 'name', searchFields: ['name', 'email'] } },
+        { name: 'nextFollowUpAt', label: 'Next Follow-up', dataType: 'datetime', uiType: 'datetime', isRequired: false },
+        { name: 'lastContactedAt', label: 'Last Contacted', dataType: 'datetime', uiType: 'datetime', isRequired: false, isReadOnly: true },
+        { name: 'notes', label: 'Notes', dataType: 'text', uiType: 'textarea', isRequired: false },
       ]),
+      // Module-specific settings configuration (tenant-admin configurable via UI)
+      moduleSettings: JSON.stringify({
+        autoNumbering: {
+          enabled: true,
+          prefix: 'LD',
+          startFrom: 1000,
+          padding: 5,
+          format: '{prefix}-{number}' // Can use {year}, {month}, etc.
+        },
+        duplicateCheck: {
+          enabled: true,
+          checkFields: ['email', 'phone'],
+          matchCriteria: 'exact', // exact, fuzzy, partial
+          action: 'warn' // block, warn, merge, skip
+        },
+        assignment: {
+          enabled: false, // Tenant can enable
+          defaultRule: 'manual', // round_robin, load_based, territory, manual
+          visibilityRules: {
+            staff: 'assigned_only', // Only see assigned leads
+            manager: 'team_and_own', // See team + own leads
+            owner: 'all', // See all leads
+            admin: 'all'
+          }
+        },
+        scoring: {
+          enabled: false, // Tenant can configure
+          criteria: [
+            { field: 'source', weights: { 'website': 20, 'referral': 30, 'google_ads': 25 } },
+            { field: 'expectedValue', ranges: [{ min: 100000, score: 30 }, { min: 50000, score: 20 }, { min: 0, score: 10 }] }
+          ],
+          thresholds: { hot: 61, warm: 31, cold: 0 }
+        },
+        clickToCall: {
+          enabled: false,
+          provider: null, // 'twilio', 'knowlarity', 'custom'
+          autoLogCalls: true
+        },
+        pipeline: {
+          enabled: true,
+          stages: ['New', 'Follow-up', 'Contacted', 'Qualified', 'Proposal', 'Negotiation', 'Converted', 'Lost', 'Unqualified', 'Unreachable'],
+          defaultView: 'list' // list, kanban
+        },
+        features: {
+          activities: true, // Activity timeline (calls, emails, meetings)
+          notes: true, // Internal notes
+          tasks: true, // Follow-up tasks with reminders
+        }
+      }),
       status: 'active',
       version: 1,
     },
@@ -58,6 +136,13 @@ export async function seedDefaultModules(prisma: PrismaClient, tenantId: string,
         { name: 'shippingAddress', label: 'Shipping Address', dataType: 'text', uiType: 'textarea', required: false },
         { name: 'status', label: 'Status', dataType: 'string', uiType: 'dropdown', required: true, options: ['Active', 'Inactive'], defaultValue: 'Active' },
       ]),
+      moduleSettings: JSON.stringify({
+        features: {
+          activities: true, // Track interactions
+          notes: true, // Client notes
+          tasks: false, // Tasks not needed for clients by default
+        }
+      }),
       status: 'active',
       version: 1,
     },

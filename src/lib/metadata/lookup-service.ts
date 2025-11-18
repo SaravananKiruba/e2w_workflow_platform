@@ -18,10 +18,71 @@ export class LookupService {
     searchTerm?: string,
     displayField?: string,
     searchFields?: string[],
-    limit: number = 50
+    limit: number = 50,
+    currentUserId?: string,
+    currentUserRole?: string
   ) {
     try {
-      console.log('[LookupService] Query:', { tenantId, targetModule, displayField, searchFields });
+      console.log('[LookupService] Query:', { tenantId, targetModule, displayField, searchFields, currentUserRole });
+      
+      // Special handling for Users module - fetch from User table
+      if (targetModule === 'Users') {
+        console.log('[LookupService] Fetching users from User table with role-based filtering');
+        
+        let where: any = {
+          tenantId,
+          status: 'active',
+        };
+        
+        // Role-based filtering:
+        // - Staff can only see themselves
+        // - Managers can see all staff and themselves
+        // - Admins can see everyone
+        if (currentUserRole === 'staff' && currentUserId) {
+          where.id = currentUserId;
+        } else if (currentUserRole === 'manager') {
+          // Manager sees all staff, managers, and admins in their tenant
+          where.role = { in: ['staff', 'manager', 'admin'] };
+        }
+        // Admin sees everyone (no additional filter)
+        
+        const users = await prisma.user.findMany({
+          where,
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+          take: limit,
+          orderBy: { name: 'asc' },
+        });
+        
+        console.log('[LookupService] Found users:', users.length);
+        
+        // Transform users to options
+        let options = users.map((user) => ({
+          value: user.id,
+          label: user.name,
+          record: user,
+        }));
+        
+        // Apply search filter if provided
+        if (searchTerm && searchFields && searchFields.length > 0) {
+          options = options.filter((opt) => {
+            return searchFields.some((field) => {
+              const fieldValue = (opt.record as any)[field];
+              if (fieldValue && typeof fieldValue === 'string') {
+                return fieldValue.toLowerCase().includes(searchTerm.toLowerCase());
+              }
+              return false;
+            });
+          });
+          console.log('[LookupService] After search filter:', options.length, 'users');
+        }
+        
+        return options;
+      }
       
       // Get module configuration to understand the data structure
       const moduleConfig = await prisma.moduleConfiguration.findFirst({
@@ -121,7 +182,9 @@ export class LookupService {
     targetModule: string,
     searchTerm: string,
     displayField?: string,
-    searchFields?: string[]
+    searchFields?: string[],
+    currentUserId?: string,
+    currentUserRole?: string
   ) {
     const options = await this.getLookupOptions(
       tenantId,
@@ -129,7 +192,9 @@ export class LookupService {
       searchTerm,
       displayField,
       searchFields || [displayField || 'name'],
-      100
+      100,
+      currentUserId,
+      currentUserRole
     );
 
     // Client-side filtering for better search experience

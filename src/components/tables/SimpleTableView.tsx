@@ -36,6 +36,8 @@ interface SimpleTableViewProps {
   onView: (record: ModuleRecord) => void;
   onEdit: (recordId: string) => void;
   onDelete: (recordId: string) => void;
+  moduleSettings?: any;
+  moduleName?: string;
 }
 
 export function SimpleTableView({
@@ -44,6 +46,8 @@ export function SimpleTableView({
   onView,
   onEdit,
   onDelete,
+  moduleSettings,
+  moduleName,
 }: SimpleTableViewProps) {
   const getFieldValue = (record: ModuleRecord, fieldName: string): any => {
     if (record.data && record.data[fieldName] !== undefined) {
@@ -76,6 +80,18 @@ export function SimpleTableView({
 
   // Show first 5 important fields
   const visibleFields = config.fields.slice(0, 5);
+  
+  // Check if Lead module with scoring/assignment enabled
+  const isLeadsModule = moduleName === 'Leads';
+  const showScore = isLeadsModule && moduleSettings?.scoring?.enabled;
+  const showAssignment = isLeadsModule && moduleSettings?.assignment?.enabled;
+
+  const getScoreBadge = (score?: number) => {
+    if (!score) return <Badge size="sm">-</Badge>;
+    if (score >= 70) return <Badge colorScheme="red" size="sm">🔥 Hot</Badge>;
+    if (score >= 40) return <Badge colorScheme="orange" size="sm">Warm</Badge>;
+    return <Badge colorScheme="blue" size="sm">❄️ Cold</Badge>;
+  };
 
   return (
     <Box overflowX="auto">
@@ -85,6 +101,8 @@ export function SimpleTableView({
             {visibleFields.map((field) => (
               <Th key={field.name}>{field.label}</Th>
             ))}
+            {showScore && <Th>Priority</Th>}
+            {showAssignment && <Th>Assigned To</Th>}
             <Th>Status</Th>
             <Th textAlign="center">Actions</Th>
           </Tr>
@@ -97,6 +115,16 @@ export function SimpleTableView({
                   {formatValue(getFieldValue(record, field.name), field.dataType)}
                 </Td>
               ))}
+              {showScore && (
+                <Td>{getScoreBadge(getFieldValue(record, 'leadScore'))}</Td>
+              )}
+              {showAssignment && (
+                <Td>
+                  <Badge size="sm" colorScheme="purple">
+                    {getFieldValue(record, 'assignedTo') || 'Unassigned'}
+                  </Badge>
+                </Td>
+              )}
               <Td>
                 <Badge
                   colorScheme={
