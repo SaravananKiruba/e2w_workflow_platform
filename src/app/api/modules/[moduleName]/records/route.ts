@@ -41,13 +41,19 @@ export async function GET(
       return NextResponse.json(result);
     }
 
-    // Legacy support: simple list
-    const records = await DynamicRecordService.getRecords(
+    // Use visibility filtering for modules with assignment rules (e.g., Leads)
+    const result = await DynamicRecordService.getRecordsWithVisibility(
       context.tenantId,
-      params.moduleName
+      params.moduleName,
+      context.userId,
+      context.user?.role || 'staff'
     );
 
-    return NextResponse.json({ records, pagination: { total: records.length } });
+    // Return in expected format: { records: [], pagination: {} }
+    return NextResponse.json({ 
+      records: result.data || result.records || [], 
+      pagination: result.pagination || { total: result.data?.length || 0 } 
+    });
   } catch (error) {
     console.error('Error fetching records:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

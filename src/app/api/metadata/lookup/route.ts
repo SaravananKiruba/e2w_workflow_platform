@@ -34,6 +34,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get current user context for role-based filtering
+    const context = await getTenantContext();
+    const currentUserId = context?.userId;
+    const currentUserRole = context?.userRole;
+
+    console.log('[Lookup API] User context:', { userId: currentUserId, userRole: currentUserRole });
+
     // Fetch lookup options
     const options = searchTerm
       ? await LookupService.searchLookupOptions(
@@ -41,14 +48,19 @@ export async function GET(request: NextRequest) {
           targetModule,
           searchTerm,
           displayField || 'name',
-          searchFields
+          searchFields,
+          currentUserId,
+          currentUserRole
         )
       : await LookupService.getLookupOptions(
           tenantId,
           targetModule,
           undefined,
           displayField || 'name',
-          searchFields
+          searchFields,
+          50,
+          currentUserId,
+          currentUserRole
         );
 
     console.log('[Lookup API] Returning', options.length, 'options');

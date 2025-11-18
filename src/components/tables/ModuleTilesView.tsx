@@ -3,6 +3,7 @@
 import {
   Box,
   Badge,
+  Button,
   Card,
   CardBody,
   CardHeader,
@@ -297,7 +298,7 @@ export default function ModuleTilesView({
                         icon={<Text>👁️</Text>}
                         size="sm"
                         variant="ghost"
-                        colorScheme="blue"
+                        colorScheme="accent"
                         onClick={() => onView(record)}
                         flex={1}
                       />
@@ -320,7 +321,7 @@ export default function ModuleTilesView({
                           icon={<Text>✓</Text>}
                           size="sm"
                           variant="ghost"
-                          colorScheme="green"
+                          colorScheme="olive"
                           isLoading={isConverting}
                           onClick={() => handleConversion(record.id, record)}
                           flex={1}

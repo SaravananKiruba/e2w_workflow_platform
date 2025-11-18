@@ -190,21 +190,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
         bg={isPlatformAdmin ? 'dark.900' : undefined}
       >
         {isPlatformAdmin ? (
-          <HStack spacing={2}>
-            <Box fontSize="2xl">💼</Box>
-            <VStack align="start" spacing={0}>
-              <Text fontSize="lg" fontWeight="bold" color={logoColor}>
-                Easy2Work
-              </Text>
-              <Badge 
-                colorScheme="accent" 
-                fontSize="xs"
-                variant="solid"
-              >
-                Platform
-              </Badge>
-            </VStack>
-          </HStack>
+          <VStack align="start" spacing={2}>
+            <Text fontSize="lg" fontWeight="bold" color={logoColor}>
+              Easy2Work
+            </Text>
+            <Badge 
+              colorScheme="accent" 
+              fontSize="xs"
+              variant="solid"
+            >
+              Platform Admin
+            </Badge>
+          </VStack>
         ) : isTenantAdmin ? (
           <VStack align="start" spacing={2}>
             <Text fontSize="sm" fontWeight="600" color="gray.500">
@@ -215,21 +212,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </Text>
           </VStack>
         ) : (
-          <HStack spacing={2}>
-            <Box fontSize="2xl">💼</Box>
-            <VStack align="start" spacing={0}>
-              <Text fontSize="lg" fontWeight="bold" color={logoColor}>
-                Easy2Work
-              </Text>
-              <Badge 
-                colorScheme={isManager ? 'olive' : isOwner ? 'olive' : 'secondary'} 
-                fontSize="xs"
-                variant="subtle"
-              >
-                {isManager ? 'Manager' : isOwner ? 'Owner' : 'User'}
-              </Badge>
-            </VStack>
-          </HStack>
+          <VStack align="start" spacing={2}>
+            <Text fontSize="lg" fontWeight="bold" color={logoColor}>
+              Easy2Work
+            </Text>
+            <Badge 
+              colorScheme={isManager ? 'olive' : isOwner ? 'olive' : 'secondary'} 
+              fontSize="xs"
+              variant="subtle"
+            >
+              {isManager ? 'Manager' : isOwner ? 'Owner' : 'User'}
+            </Badge>
+          </VStack>
         )}
       </Box>
 
@@ -247,7 +241,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         {isPlatformAdmin && (
               <>
                 <Text fontSize="xs" fontWeight="bold" color="accent.400" px={3} pt={2} pb={1}>
-                  🏢 PLATFORM ADMIN
+                  PLATFORM ADMIN
                 </Text>
                 {platformAdminModules.map((item) => {
                   const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
@@ -284,7 +278,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             {isTenantAdmin && (
               <>
                 <Text fontSize="xs" fontWeight="bold" color="primary.600" px={3} pt={2} pb={1}>
-                  ⚙️ TENANT CONFIGURATION
+                  TENANT CONFIGURATION
                 </Text>
                 {tenantAdminModules.map((item) => {
                   const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
@@ -298,7 +292,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       leftIcon={<Icon as={item.icon} />}
                       size="md"
                       fontWeight={isActive ? 'bold' : 'normal'}
-                      _hover={{ bg: 'purple.50' }}
+                      _hover={{ bg: 'primary.50' }}
                     >
                       <Text flex={1} textAlign="left" isTruncated>
                         {item.name}
@@ -323,10 +317,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   <>
                     {Object.entries(dynamicModules).map(([workflow, modules]) => (
                       <React.Fragment key={workflow}>
-                        <Text fontSize="xs" fontWeight="bold" color={workflow === 'Purchase' ? 'green.600' : 'blue.600'} px={3} pt={workflow === Object.keys(dynamicModules)[0] ? 2 : 4} pb={1}>
-                          {workflow === 'Sales' && '📊 SALES MODULES'}
-                          {workflow === 'Purchase' && '🛒 PURCHASE MODULES'}
-                          {workflow !== 'Sales' && workflow !== 'Purchase' && `🎯 ${workflow.toUpperCase()}`}
+                        <Text fontSize="xs" fontWeight="bold" color={workflow === 'Purchase' ? 'olive.600' : 'accent.600'} px={3} pt={workflow === Object.keys(dynamicModules)[0] ? 2 : 4} pb={1}>
+                          {workflow === 'Sales' && 'SALES MODULES'}
+                          {workflow === 'Purchase' && 'PURCHASE MODULES'}
+                          {workflow !== 'Sales' && workflow !== 'Purchase' && `${workflow.toUpperCase()}`}
                         </Text>
                         {modules.map((item) => {
                           const isActive = pathname === item.href;
@@ -335,12 +329,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
                               key={item.name}
                               onClick={() => router.push(item.href)}
                               variant={isActive ? 'solid' : 'ghost'}
-                              colorScheme={isActive ? (workflow === 'Purchase' ? 'green' : workflow === 'Sales' ? 'blue' : 'purple') : 'gray'}
+                              colorScheme={isActive ? (workflow === 'Purchase' ? 'olive' : workflow === 'Sales' ? 'accent' : 'primary') : 'gray'}
                               justifyContent="flex-start"
                               leftIcon={<Icon as={item.icon} />}
                               size="md"
                               fontWeight={isActive ? 'bold' : 'normal'}
-                              _hover={{ bg: workflow === 'Purchase' ? 'green.50' : workflow === 'Sales' ? 'blue.50' : 'purple.50' }}
+                              _hover={{ bg: workflow === 'Purchase' ? 'olive.50' : workflow === 'Sales' ? 'accent.50' : 'primary.50' }}
                             >
                               <Text flex={1} textAlign="left" isTruncated>
                                 {item.name}
@@ -354,18 +348,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
                           <Button
                             onClick={() => router.push(`/analytics/${workflow}`)}
                             variant={pathname === `/analytics/${workflow}` ? 'solid' : 'ghost'}
-                            colorScheme={pathname === `/analytics/${workflow}` ? (workflow === 'Purchase' ? 'green' : workflow === 'Sales' ? 'blue' : 'purple') : 'gray'}
+                            colorScheme={pathname === `/analytics/${workflow}` ? (workflow === 'Purchase' ? 'olive' : workflow === 'Sales' ? 'accent' : 'primary') : 'gray'}
                             justifyContent="flex-start"
                             leftIcon={<Icon as={FiTrendingUp} />}
                             size="md"
                             fontWeight={pathname === `/analytics/${workflow}` ? 'bold' : 'normal'}
-                            _hover={{ bg: workflow === 'Purchase' ? 'green.50' : workflow === 'Sales' ? 'blue.50' : 'purple.50' }}
+                            _hover={{ bg: workflow === 'Purchase' ? 'olive.50' : workflow === 'Sales' ? 'accent.50' : 'primary.50' }}
                             borderTop="1px"
-                            borderColor={workflow === 'Purchase' ? 'green.100' : workflow === 'Sales' ? 'blue.100' : 'purple.100'}
+                            borderColor={workflow === 'Purchase' ? 'olive.100' : workflow === 'Sales' ? 'accent.100' : 'primary.100'}
                             mt={1}
                           >
                             <Text flex={1} textAlign="left" isTruncated>
-                              📊 {workflow} Analytics
+                              {workflow} Analytics
                             </Text>
                           </Button>
                         )}
@@ -391,7 +385,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             w="full"
             h="auto"
             p={2}
-            _hover={{ bg: isPlatformAdmin ? 'gray.700' : 'gray.100' }}
+            _hover={{ bg: isPlatformAdmin ? 'dark.700' : 'primary.50' }}
           >
             <HStack spacing={3}>
               <Avatar
@@ -520,7 +514,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </Box>
 
         {/* Page Content */}
-        <Box flex={1} overflowY="auto" bg={useColorModeValue('gray.50', 'dark.800')}>
+        <Box flex={1} overflowY="auto" bg={useColorModeValue('#faf6f2', 'dark.800')}>
           {children}
         </Box>
       </Flex>

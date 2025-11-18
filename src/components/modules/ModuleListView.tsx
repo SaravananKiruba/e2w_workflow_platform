@@ -80,12 +80,33 @@ export default function ModuleListView({
   const [viewMode, setViewMode] = useState<'table' | 'tiles'>(defaultViewMode);
   const [activeTab, setActiveTab] = useState(0);
   const [isConverting, setIsConverting] = useState(false);
+  const [moduleSettings, setModuleSettings] = useState<any>(null);
+
+  // Load module settings
+  useEffect(() => {
+    if (!tenantId || !moduleName) return;
+    loadModuleSettings();
+  }, [moduleName, tenantId]);
 
   // Load records
   useEffect(() => {
     if (!tenantId) return;
     loadRecords();
   }, [moduleName, tenantId]);
+
+  const loadModuleSettings = async () => {
+    try {
+      const response = await fetch(
+        `/api/tenant-admin/module-settings?tenantId=${tenantId}&moduleName=${moduleName}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setModuleSettings(data.settings);
+      }
+    } catch (error) {
+      console.error('Error loading module settings:', error);
+    }
+  };
 
   // Apply filters
   useEffect(() => {
@@ -120,6 +141,11 @@ export default function ModuleListView({
   };
 
   const applyFilters = () => {
+    if (!records || !Array.isArray(records)) {
+      setFilteredRecords([]);
+      return;
+    }
+    
     let filtered = [...records];
 
     // Status filter
@@ -360,6 +386,8 @@ export default function ModuleListView({
           onView={onView}
           onEdit={onEdit}
           onDelete={handleDelete}
+          moduleSettings={moduleSettings}
+          moduleName={moduleName}
         />
       ) : (
         <ModuleTilesView

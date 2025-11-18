@@ -30,6 +30,23 @@ import {
   useDisclosure,
   Text,
   Divider,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  Switch,
+  Input,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+  NumberIncrementStepper,
+  NumberDecrementStepper,
+  Badge,
+  SimpleGrid,
+  Card,
+  CardHeader,
+  CardBody,
 } from '@chakra-ui/react';
 import { DndContext, DragEndEvent, DragOverEvent, closestCenter } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -96,6 +113,8 @@ export default function FieldBuilderPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [initialFieldsSnapshot, setInitialFieldsSnapshot] = useState<string>('');
+  const [moduleSettings, setModuleSettings] = useState<any>(null);
+  const [settingsChanged, setSettingsChanged] = useState(false);
 
   const bgColor = useColorModeValue('gray.50', 'gray.900');
 
@@ -193,6 +212,8 @@ export default function FieldBuilderPage() {
           duration: 3000,
         });
       }
+      // Load module settings
+      await loadModuleSettings(moduleName);
     } catch (error) {
       console.error('Error loading module config:', error);
       toast({
@@ -204,6 +225,69 @@ export default function FieldBuilderPage() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function loadModuleSettings(moduleName: string) {
+    try {
+      const response = await fetch(`/api/tenant-admin/module-settings?moduleName=${moduleName}`);
+      if (response.ok) {
+        const data = await response.json();
+        setModuleSettings(data.settings || {});
+        setSettingsChanged(false);
+      }
+    } catch (error) {
+      console.error('Error loading module settings:', error);
+    }
+  }
+
+  async function saveModuleSettings() {
+    if (!selectedModule) return;
+
+    try {
+      const response = await fetch('/api/tenant-admin/module-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          moduleName: selectedModule,
+          settings: moduleSettings,
+        }),
+      });
+
+      if (response.ok) {
+        setSettingsChanged(false);
+        toast({
+          title: 'Settings saved',
+          description: `${selectedModule} module settings updated successfully`,
+          status: 'success',
+          duration: 3000,
+        });
+      } else {
+        throw new Error('Failed to save settings');
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast({
+        title: 'Save failed',
+        description: 'Could not save module settings',
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  }
+
+  function updateSettings(path: string, value: any) {
+    const keys = path.split('.');
+    const newSettings = { ...moduleSettings };
+    let current: any = newSettings;
+    
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (!current[keys[i]]) current[keys[i]] = {};
+      current = current[keys[i]];
+    }
+    
+    current[keys[keys.length - 1]] = value;
+    setModuleSettings(newSettings);
+    setSettingsChanged(true);
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -488,7 +572,21 @@ export default function FieldBuilderPage() {
             </FormControl>
           </Box>
 
+          {/* Tabs for Fields and Settings */}
           {selectedModule && (
+            <Tabs colorScheme="blue">
+              <TabList>
+                <Tab>Fields</Tab>
+                <Tab>
+                  Settings
+                  {settingsChanged && <Badge ml={2} colorScheme="orange">Unsaved</Badge>}
+                </Tab>
+              </TabList>
+
+              <TabPanels>
+                {/* Fields Tab Panel */}
+                <TabPanel p={0} pt={6}>
+                  {selectedModule && (
             <DndContext
               collisionDetection={closestCenter}
               onDragEnd={handleDragEnd}
@@ -525,6 +623,328 @@ export default function FieldBuilderPage() {
                 </GridItem>
               </Grid>
             </DndContext>
+          )}
+                </TabPanel>
+
+                {/* Settings Tab Panel */}
+                <TabPanel pt={6}>
+                  {moduleSettings && (
+                    <VStack spacing={6} align="stretch">
+                      <HStack justify="space-between">
+                        <Heading size="md">Module Behavior Settings</Heading>
+                        <Button
+                          colorScheme="blue"
+                          onClick={saveModuleSettings}
+                          isDisabled={!settingsChanged}
+                        >
+                          Save Settings
+                        </Button>
+                      </HStack>
+
+                      {/* Auto Numbering Section */}
+                      <Card>
+                        <CardHeader>
+                          <HStack justify="space-between">
+                            <VStack align="start" spacing={0}>
+                              <Heading size="sm">Auto Numbering</Heading>
+                              <Text fontSize="sm" color="gray.600">Automatically generate unique IDs for new records</Text>
+                            </VStack>
+                            <Switch
+                              isChecked={moduleSettings?.autoNumbering?.enabled || false}
+                              onChange={(e) => updateSettings('autoNumbering.enabled', e.target.checked)}
+                              colorScheme="blue"
+                            />
+                          </HStack>
+                        </CardHeader>
+                        {moduleSettings?.autoNumbering?.enabled && (
+                          <CardBody pt={0}>
+                            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                              <FormControl>
+                                <FormLabel fontSize="sm">Prefix</FormLabel>
+                                <Input
+                                  value={moduleSettings?.autoNumbering?.prefix || ''}
+                                  onChange={(e) => updateSettings('autoNumbering.prefix', e.target.value)}
+                                  placeholder="LD"
+                                />
+                              </FormControl>
+                              <FormControl>
+                                <FormLabel fontSize="sm">Start From</FormLabel>
+                                <NumberInput
+                                  value={moduleSettings?.autoNumbering?.startFrom || 1000}
+                                  onChange={(value) => updateSettings('autoNumbering.startFrom', parseInt(value))}
+                                  min={1}
+                                >
+                                  <NumberInputField />
+                                  <NumberInputStepper>
+                                    <NumberIncrementStepper />
+                                    <NumberDecrementStepper />
+                                  </NumberInputStepper>
+                                </NumberInput>
+                              </FormControl>
+                              <FormControl>
+                                <FormLabel fontSize="sm">Padding (digits)</FormLabel>
+                                <NumberInput
+                                  value={moduleSettings?.autoNumbering?.padding || 5}
+                                  onChange={(value) => updateSettings('autoNumbering.padding', parseInt(value))}
+                                  min={1}
+                                  max={10}
+                                >
+                                  <NumberInputField />
+                                  <NumberInputStepper>
+                                    <NumberIncrementStepper />
+                                    <NumberDecrementStepper />
+                                  </NumberInputStepper>
+                                </NumberInput>
+                              </FormControl>
+                              <FormControl>
+                                <FormLabel fontSize="sm">Format</FormLabel>
+                                <Input
+                                  value={moduleSettings?.autoNumbering?.format || '{prefix}-{number}'}
+                                  onChange={(e) => updateSettings('autoNumbering.format', e.target.value)}
+                                  placeholder="{prefix}-{number}"
+                                />
+                                <Text fontSize="xs" color="gray.500" mt={1}>Use: {'{prefix}'}, {'{year}'}, {'{month}'}, {'{number}'}</Text>
+                              </FormControl>
+                            </SimpleGrid>
+                          </CardBody>
+                        )}
+                      </Card>
+
+                      {/* Duplicate Check Section */}
+                      <Card>
+                        <CardHeader>
+                          <HStack justify="space-between">
+                            <VStack align="start" spacing={0}>
+                              <Heading size="sm">Duplicate Detection</Heading>
+                              <Text fontSize="sm" color="gray.600">Prevent duplicate records based on field matching</Text>
+                            </VStack>
+                            <Switch
+                              isChecked={moduleSettings?.duplicateCheck?.enabled || false}
+                              onChange={(e) => updateSettings('duplicateCheck.enabled', e.target.checked)}
+                              colorScheme="blue"
+                            />
+                          </HStack>
+                        </CardHeader>
+                        {moduleSettings?.duplicateCheck?.enabled && (
+                          <CardBody pt={0}>
+                            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                              <FormControl>
+                                <FormLabel fontSize="sm">Check Fields</FormLabel>
+                                <Text fontSize="xs" color="gray.600" mb={2}>Comma-separated: email, phone</Text>
+                                <Input
+                                  value={(moduleSettings?.duplicateCheck?.checkFields || []).join(', ')}
+                                  onChange={(e) => updateSettings('duplicateCheck.checkFields', e.target.value.split(',').map((f:string) => f.trim()))}
+                                  placeholder="email, phone"
+                                />
+                              </FormControl>
+                              <FormControl>
+                                <FormLabel fontSize="sm">Match Criteria</FormLabel>
+                                <Select
+                                  value={moduleSettings?.duplicateCheck?.matchCriteria || 'exact'}
+                                  onChange={(e) => updateSettings('duplicateCheck.matchCriteria', e.target.value)}
+                                >
+                                  <option value="exact">Exact Match</option>
+                                  <option value="partial">Partial Match</option>
+                                  <option value="fuzzy">Fuzzy Match</option>
+                                </Select>
+                              </FormControl>
+                              <FormControl>
+                                <FormLabel fontSize="sm">Action</FormLabel>
+                                <Select
+                                  value={moduleSettings?.duplicateCheck?.action || 'warn'}
+                                  onChange={(e) => updateSettings('duplicateCheck.action', e.target.value)}
+                                >
+                                  <option value="warn">Warn (allow creation)</option>
+                                  <option value="block">Block (prevent creation)</option>
+                                </Select>
+                              </FormControl>
+                            </SimpleGrid>
+                          </CardBody>
+                        )}
+                      </Card>
+
+                      {/* Assignment Rules Section (Leads module only) */}
+                      {selectedModule === 'Leads' && (
+                        <Card>
+                          <CardHeader>
+                            <HStack justify="space-between">
+                              <VStack align="start" spacing={0}>
+                                <Heading size="sm">Smart Assignment</Heading>
+                                <Text fontSize="sm" color="gray.600">Automatically assign leads to users</Text>
+                              </VStack>
+                              <Switch
+                                isChecked={moduleSettings?.assignment?.enabled || false}
+                                onChange={(e) => updateSettings('assignment.enabled', e.target.checked)}
+                                colorScheme="blue"
+                              />
+                            </HStack>
+                          </CardHeader>
+                          {moduleSettings?.assignment?.enabled && (
+                            <CardBody pt={0}>
+                              <VStack spacing={4} align="stretch">
+                                <FormControl>
+                                  <FormLabel fontSize="sm">Assignment Rule</FormLabel>
+                                  <Select
+                                    value={moduleSettings?.assignment?.defaultRule || 'manual'}
+                                    onChange={(e) => updateSettings('assignment.defaultRule', e.target.value)}
+                                  >
+                                    <option value="manual">Manual Assignment</option>
+                                    <option value="round_robin">Round Robin</option>
+                                    <option value="load_based">Load Based (least leads)</option>
+                                  </Select>
+                                </FormControl>
+                                <Divider />
+                                <Text fontSize="sm" fontWeight="bold">Visibility Rules</Text>
+                                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+                                  <FormControl>
+                                    <FormLabel fontSize="sm">Staff Can See</FormLabel>
+                                    <Select
+                                      value={moduleSettings?.assignment?.visibilityRules?.staff || 'assigned_only'}
+                                      onChange={(e) => updateSettings('assignment.visibilityRules.staff', e.target.value)}
+                                    >
+                                      <option value="assigned_only">Assigned Only</option>
+                                      <option value="all">All Leads</option>
+                                    </Select>
+                                  </FormControl>
+                                  <FormControl>
+                                    <FormLabel fontSize="sm">Manager Can See</FormLabel>
+                                    <Select
+                                      value={moduleSettings?.assignment?.visibilityRules?.manager || 'team_and_own'}
+                                      onChange={(e) => updateSettings('assignment.visibilityRules.manager', e.target.value)}
+                                    >
+                                      <option value="assigned_only">Assigned Only</option>
+                                      <option value="team_and_own">Team + Own</option>
+                                      <option value="all">All Leads</option>
+                                    </Select>
+                                  </FormControl>
+                                  <FormControl>
+                                    <FormLabel fontSize="sm">Owner Can See</FormLabel>
+                                    <Select
+                                      value={moduleSettings?.assignment?.visibilityRules?.owner || 'all'}
+                                      onChange={(e) => updateSettings('assignment.visibilityRules.owner', e.target.value)}
+                                    >
+                                      <option value="all">All Leads</option>
+                                    </Select>
+                                  </FormControl>
+                                </SimpleGrid>
+                              </VStack>
+                            </CardBody>
+                          )}
+                        </Card>
+                      )}
+
+                      {/* Lead Scoring Section (Leads module only) */}
+                      {selectedModule === 'Leads' && (
+                        <Card>
+                          <CardHeader>
+                            <HStack justify="space-between">
+                              <VStack align="start" spacing={0}>
+                                <Heading size="sm">Lead Priority Scoring</Heading>
+                                <Text fontSize="sm" color="gray.600">Auto-calculate Hot/Warm/Cold priority</Text>
+                              </VStack>
+                              <Switch
+                                isChecked={moduleSettings?.scoring?.enabled || false}
+                                onChange={(e) => updateSettings('scoring.enabled', e.target.checked)}
+                                colorScheme="blue"
+                              />
+                            </HStack>
+                          </CardHeader>
+                          {moduleSettings?.scoring?.enabled && (
+                            <CardBody pt={0}>
+                              <Text fontSize="sm" color="gray.600">
+                                Configure scoring in Workflow Builder for advanced rules
+                              </Text>
+                            </CardBody>
+                          )}
+                        </Card>
+                      )}
+
+                      {/* Click-to-Call Section (Leads module only) */}
+                      {selectedModule === 'Leads' && (
+                        <Card>
+                          <CardHeader>
+                            <HStack justify="space-between">
+                              <VStack align="start" spacing={0}>
+                                <Heading size="sm">Click-to-Call Integration</Heading>
+                                <Text fontSize="sm" color="gray.600">Enable phone calling from lead screen</Text>
+                              </VStack>
+                              <Switch
+                                isChecked={moduleSettings?.clickToCall?.enabled || false}
+                                onChange={(e) => updateSettings('clickToCall.enabled', e.target.checked)}
+                                colorScheme="blue"
+                              />
+                            </HStack>
+                          </CardHeader>
+                          {moduleSettings?.clickToCall?.enabled && (
+                            <CardBody pt={0}>
+                              <FormControl>
+                                <FormLabel fontSize="sm">Provider</FormLabel>
+                                <Select
+                                  value={moduleSettings?.clickToCall?.provider || ''}
+                                  onChange={(e) => updateSettings('clickToCall.provider', e.target.value)}
+                                  placeholder="Select provider"
+                                >
+                                  <option value="twilio">Twilio</option>
+                                  <option value="knowlarity">Knowlarity</option>
+                                  <option value="custom">Custom</option>
+                                </Select>
+                              </FormControl>
+                            </CardBody>
+                          )}
+                        </Card>
+                      )}
+
+                      {/* Generic Features Section (ALL modules) */}
+                      <Card>
+                        <CardHeader>
+                          <Heading size="sm">Record Features</Heading>
+                          <Text fontSize="sm" color="gray.600">Enable/disable features for this module</Text>
+                        </CardHeader>
+                        <CardBody>
+                          <VStack spacing={4} align="stretch">
+                            <HStack justify="space-between">
+                              <Box>
+                                <Text fontWeight="medium">Activities Timeline</Text>
+                                <Text fontSize="sm" color="gray.600">Track calls, emails, meetings</Text>
+                              </Box>
+                              <Switch
+                                isChecked={moduleSettings?.features?.activities || false}
+                                onChange={(e) => updateSettings('features.activities', e.target.checked)}
+                                colorScheme="blue"
+                              />
+                            </HStack>
+                            <Divider />
+                            <HStack justify="space-between">
+                              <Box>
+                                <Text fontWeight="medium">Notes</Text>
+                                <Text fontSize="sm" color="gray.600">Add internal notes to records</Text>
+                              </Box>
+                              <Switch
+                                isChecked={moduleSettings?.features?.notes || false}
+                                onChange={(e) => updateSettings('features.notes', e.target.checked)}
+                                colorScheme="blue"
+                              />
+                            </HStack>
+                            <Divider />
+                            <HStack justify="space-between">
+                              <Box>
+                                <Text fontWeight="medium">Tasks & Follow-ups</Text>
+                                <Text fontSize="sm" color="gray.600">Create follow-up tasks with reminders</Text>
+                              </Box>
+                              <Switch
+                                isChecked={moduleSettings?.features?.tasks || false}
+                                onChange={(e) => updateSettings('features.tasks', e.target.checked)}
+                                colorScheme="blue"
+                              />
+                            </HStack>
+                          </VStack>
+                        </CardBody>
+                      </Card>
+                    </VStack>
+                  )}
+                </TabPanel>
+              </TabPanels>
+            </Tabs>
           )}
 
           {!selectedModule && (
