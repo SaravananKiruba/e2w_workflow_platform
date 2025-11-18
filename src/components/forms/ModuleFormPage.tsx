@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { DynamicForm, DynamicFormRef } from './DynamicForm';
 import { ModuleConfig } from '@/types/metadata';
+import { useInvalidateLookups } from '@/lib/hooks/use-lookup-query';
 
 interface ModuleFormPageProps {
   moduleConfig: ModuleConfig;
@@ -44,6 +45,9 @@ export default function ModuleFormPage({
   const toast = useToast();
   const formRef = useRef<DynamicFormRef>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Hook to invalidate lookup caches after create/update
+  const invalidateLookups = useInvalidateLookups();
 
   const handleFormSubmit = async (data: Record<string, any>) => {
     try {
@@ -63,6 +67,15 @@ export default function ModuleFormPage({
 
       if (!response.ok) {
         throw new Error('Failed to save record');
+      }
+
+      // ✅ EPIC 1.1: Auto-refresh dropdowns after create/update
+      // Invalidate the lookup cache for this module so dropdowns refresh
+      invalidateLookups(moduleName, tenantId);
+      
+      // Also invalidate related modules (e.g., when converting Lead -> Client)
+      if (moduleName === 'Leads' && data.status === 'Converted') {
+        invalidateLookups('Clients', tenantId);
       }
 
       toast({

@@ -71,7 +71,6 @@ export async function POST(request: NextRequest) {
         icon: icon || 'FiGrid',
         isSystem: false,
         moduleSequence: moduleSequence ? JSON.stringify(moduleSequence) : '[]',
-        createdBy: session.user.id,
       },
     });
 
