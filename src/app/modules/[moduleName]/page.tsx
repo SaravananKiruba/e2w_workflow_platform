@@ -45,10 +45,9 @@ import {
   GridItem,
   Flex,
 } from '@chakra-ui/react';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { DynamicForm, DynamicFormRef } from '@/components/forms/DynamicForm';
 import { ModuleConfig, FieldDefinition } from '@/types/metadata';
 import AppLayout from '@/components/layout/AppLayout';
 import ModuleTilesView from '@/components/tables/ModuleTilesView';
@@ -87,7 +86,6 @@ export default function ModulePage() {
   const router = useRouter();
   const { data: session } = useSession();
   const toast = useToast();
-  const formRef = useRef<DynamicFormRef>(null);
 
   const moduleName = params.moduleName as string;
   const tenantId = session?.user?.tenantId;
@@ -98,7 +96,6 @@ export default function ModulePage() {
   const [filteredRecords, setFilteredRecords] = useState<ModuleRecord[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<ModuleRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
@@ -109,7 +106,7 @@ export default function ModulePage() {
   const defaultViewMode = (userRole === 'manager' || userRole === 'staff') ? 'tiles' : 'table';
   const [viewMode, setViewMode] = useState<'table' | 'tiles'>(defaultViewMode);
 
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  // Only need view detail modal now (create/edit use page view)
   const {
     isOpen: isDetailOpen,
     onOpen: onDetailOpen,
@@ -232,8 +229,8 @@ export default function ModulePage() {
   };
 
   const handleEdit = (record: ModuleRecord) => {
-    setSelectedRecord(record);
-    onOpen();
+    // Navigate to edit record page instead of opening modal
+    router.push(`/modules/${moduleName}/edit/${record.id}`);
   };
 
   const handleView = (record: ModuleRecord) => {
@@ -399,50 +396,6 @@ export default function ModulePage() {
       });
     } finally {
       setIsConverting(false);
-    }
-  };
-
-  const handleFormSubmit = async (data: Record<string, any>) => {
-    if (!moduleConfig) return;
-
-    try {
-      setIsSubmitting(true);
-
-      const url = selectedRecord
-        ? `/api/modules/${moduleName}/records/${selectedRecord.id}?tenantId=${tenantId}`
-        : `/api/modules/${moduleName}/records?tenantId=${tenantId}`;
-
-      const method = selectedRecord ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save record');
-      }
-
-      toast({
-        title: 'Success',
-        description: `Record ${selectedRecord ? 'updated' : 'created'} successfully`,
-        status: 'success',
-        isClosable: true,
-      });
-
-      onClose();
-      loadRecords();
-    } catch (error) {
-      console.error('Error saving record:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save record',
-        status: 'error',
-        isClosable: true,
-      });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -855,41 +808,6 @@ export default function ModulePage() {
         </VStack>
       </Container>
 
-      {/* Create/Edit Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="2xl">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader bg="primary.500" color="white">
-            {selectedRecord ? `Edit ${moduleConfig.displayName}` : `New ${moduleConfig.displayName}`}
-          </ModalHeader>
-          <ModalBody py={6}>
-            <DynamicForm
-              ref={formRef}
-              config={moduleConfig}
-              initialData={selectedRecord ? (selectedRecord.data && typeof selectedRecord.data === 'object' && !Array.isArray(selectedRecord.data) ? selectedRecord.data : selectedRecord) : {}}
-              onSubmit={handleFormSubmit}
-            />
-          </ModalBody>
-          <ModalFooter bg="gray.50">
-            <HStack spacing={3}>
-              <Button variant="ghost" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button
-                colorScheme="primary"
-                isLoading={isSubmitting}
-                onClick={() => {
-                  // Trigger form submission via ref
-                  formRef.current?.submit();
-                }}
-              >
-                {selectedRecord ? 'Update' : 'Create'}
-              </Button>
-            </HStack>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
       {/* View Detail Modal */}
       <Modal isOpen={isDetailOpen} onClose={onDetailClose} size="2xl">
         <ModalOverlay />
@@ -940,84 +858,6 @@ export default function ModulePage() {
                     Last Updated: {new Date(selectedRecord.updatedAt).toLocaleString('en-IN')}
                   </Text>
                 </Box>
-              </VStack>
-            )}
-          </ModalBody>
-          <ModalFooter bg="gray.50">
-            <HStack spacing={3}>
-              <Button
-                colorScheme="primary"
-                onClick={() => {
-                  handleEdit(selectedRecord!);
-                  onDetailClose();
-                }}
-              >
-                Edit
-              </Button>
-              <Button variant="ghost" onClick={onDetailClose}>
-                Close
-              </Button>
-            </HStack>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      {/* Create/Edit Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="2xl">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>
-            {selectedRecord ? `Edit ${moduleConfig.displayName}` : `New ${moduleConfig.displayName}`}
-          </ModalHeader>
-          <ModalBody>
-            <DynamicForm
-              ref={formRef}
-              config={moduleConfig}
-              initialData={selectedRecord ? (selectedRecord.data && typeof selectedRecord.data === 'object' && !Array.isArray(selectedRecord.data) ? selectedRecord.data : selectedRecord) : {}}
-              onSubmit={handleFormSubmit}
-            />
-          </ModalBody>
-          <ModalFooter>
-            <HStack spacing={2}>
-              <Button variant="ghost" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button
-                colorScheme="primary"
-                isLoading={isSubmitting}
-                onClick={() => {
-                  // Trigger form submission via ref
-                  formRef.current?.submit();
-                }}
-              >
-                {selectedRecord ? 'Update' : 'Create'}
-              </Button>
-            </HStack>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      {/* View Detail Modal */}
-      <Modal isOpen={isDetailOpen} onClose={onDetailClose} size="2xl">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>{moduleConfig.displayName} Details</ModalHeader>
-          <ModalBody>
-            {selectedRecord && (
-              <VStack align="stretch" spacing={4}>
-                {moduleConfig.fields.map((field) => {
-                  const value = getFieldValue(selectedRecord, field.name);
-                  return (
-                    <Box key={field.name}>
-                      <Text fontWeight="bold" fontSize="sm" color="gray.600">
-                        {field.label}
-                      </Text>
-                      <Text fontSize="md">
-                        {getDisplayValue(field, value)}
-                      </Text>
-                    </Box>
-                  );
-                })}
               </VStack>
             )}
           </ModalBody>
