@@ -124,15 +124,15 @@ export default function ModulePage() {
 
     // Status filter
     if (statusFilter !== 'All') {
-      filtered = filtered.filter((r) => getFieldValue(r, 'status') === statusFilter);
+      filtered = filtered.filter((r) => getStringValue(getFieldValue(r, 'status')) === statusFilter);
     }
 
     // Tab-based filtering (for Leads: New, Contacted, Qualified, etc.)
     if (moduleName === 'Leads') {
-      if (activeTab === 1) filtered = filtered.filter((r) => getFieldValue(r, 'status') === 'New');
-      else if (activeTab === 2) filtered = filtered.filter((r) => getFieldValue(r, 'status') === 'Contacted');
-      else if (activeTab === 3) filtered = filtered.filter((r) => getFieldValue(r, 'status') === 'Qualified');
-      else if (activeTab === 4) filtered = filtered.filter((r) => ['Converted', 'Lost'].includes(getFieldValue(r, 'status')));
+      if (activeTab === 1) filtered = filtered.filter((r) => getStringValue(getFieldValue(r, 'status')) === 'New');
+      else if (activeTab === 2) filtered = filtered.filter((r) => getStringValue(getFieldValue(r, 'status')) === 'Contacted');
+      else if (activeTab === 3) filtered = filtered.filter((r) => getStringValue(getFieldValue(r, 'status')) === 'Qualified');
+      else if (activeTab === 4) filtered = filtered.filter((r) => ['Converted', 'Lost'].includes(getStringValue(getFieldValue(r, 'status'))));
     }
 
     // Search filter (searches across all text/email/phone fields)
@@ -142,7 +142,8 @@ export default function ModulePage() {
         return moduleConfig.fields.some((field) => {
           if (['text', 'email', 'phone'].includes(field.dataType)) {
             const value = getFieldValue(r, field.name);
-            return value && String(value).toLowerCase().includes(query);
+            const stringValue = getStringValue(value);
+            return stringValue && stringValue.toLowerCase().includes(query);
           }
           return false;
         });
@@ -426,6 +427,14 @@ export default function ModulePage() {
   const getDisplayValue = (field: FieldDefinition, value: any) => {
     if (value === null || value === undefined) return '-';
 
+    // Handle object values (lookup/dropdown fields that return {label, value})
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      if (value.label) return value.label;
+      if (value.value) return value.value;
+      if (value.name) return value.name;
+      return '-';
+    }
+
     switch (field.dataType) {
       case 'currency':
         return new Intl.NumberFormat('en-IN', {
@@ -454,10 +463,21 @@ export default function ModulePage() {
     return (record as any)[fieldName];
   };
 
+  // Helper to extract string value from potentially object values
+  const getStringValue = (value: any): string => {
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      return value.label || value.value || value.name || '';
+    }
+    return value ? String(value) : '';
+  };
+
   // Helper to get status badge color
-  const getStatusColor = (status: string, moduleName: string) => {
+  const getStatusColor = (status: any, moduleName: string) => {
+    // Handle object values
+    const statusStr = typeof status === 'object' ? (status?.label || status?.value || '') : (status || '');
+    
     if (moduleName === 'Leads') {
-      switch (status) {
+      switch (statusStr) {
         case 'New': return 'blue';
         case 'Contacted': return 'cyan';
         case 'Qualified': return 'purple';
@@ -467,12 +487,15 @@ export default function ModulePage() {
       }
     }
     // Add more module-specific colors as needed
-    return status === 'Converted' || status === 'Paid' || status === 'Completed' ? 'green' : 'blue';
+    return statusStr === 'Converted' || statusStr === 'Paid' || statusStr === 'Completed' ? 'green' : 'blue';
   };
 
   // Helper to get priority color
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
+  const getPriorityColor = (priority: any) => {
+    // Handle object values
+    const priorityStr = typeof priority === 'object' ? (priority?.label || priority?.value || '') : (priority || '');
+    
+    switch (priorityStr) {
       case 'Low': return 'gray';
       case 'Medium': return 'blue';
       case 'High': return 'orange';
@@ -497,8 +520,16 @@ export default function ModulePage() {
     const stats: Record<string, number> = { total: records.length };
 
     if (statusField && statusField.config?.options) {
-      statusField.config.options.forEach((option: string) => {
-        stats[option] = records.filter((r) => getFieldValue(r, 'status') === option).length;
+      statusField.config.options.forEach((option: any) => {
+        // Handle both string and object options from config
+        const optionValue = typeof option === 'object' ? (option.value || option.label) : option;
+        
+        stats[optionValue] = records.filter((r) => {
+          const statusValue = getFieldValue(r, 'status');
+          // Handle both string and object values in records
+          const statusStr = typeof statusValue === 'object' ? (statusValue?.label || statusValue?.value) : statusValue;
+          return statusStr === optionValue;
+        }).length;
       });
     }
 
@@ -559,20 +590,24 @@ export default function ModulePage() {
             {moduleConfig.fields
               .find((f) => f.name === 'status')
               ?.config?.options.slice(0, 5)
-              .map((option: string) => (
-                <GridItem key={option}>
-                  <Card bg="white" borderLeft="4px" borderColor={`${getStatusColor(option, moduleName)}.500`}>
-                    <CardBody>
-                      <Stat>
-                        <StatLabel fontSize="sm" color="gray.600">{option}</StatLabel>
-                        <StatNumber fontSize="2xl" color={`${getStatusColor(option, moduleName)}.600`}>
-                          {statistics[option] || 0}
-                        </StatNumber>
-                      </Stat>
-                    </CardBody>
-                  </Card>
-                </GridItem>
-              ))}
+              .map((option: any) => {
+                const optionValue = typeof option === 'object' ? (option.value || option.label) : option;
+                const optionLabel = typeof option === 'object' ? (option.label || option.value) : option;
+                return (
+                  <GridItem key={optionValue}>
+                    <Card bg="white" borderLeft="4px" borderColor={`${getStatusColor(optionValue, moduleName)}.500`}>
+                      <CardBody>
+                        <Stat>
+                          <StatLabel fontSize="sm" color="gray.600">{optionLabel}</StatLabel>
+                          <StatNumber fontSize="2xl" color={`${getStatusColor(optionValue, moduleName)}.600`}>
+                            {statistics[optionValue] || 0}
+                          </StatNumber>
+                        </Stat>
+                      </CardBody>
+                    </Card>
+                  </GridItem>
+                );
+              })}
             </Grid>
           )}
 
@@ -598,11 +633,15 @@ export default function ModulePage() {
                       <option value="All">All Status</option>
                       {moduleConfig.fields
                         .find((f) => f.name === 'status')
-                        ?.config?.options.map((option: string) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
+                        ?.config?.options.map((option: any) => {
+                          const optionValue = typeof option === 'object' ? (option.value || option.label) : option;
+                          const optionLabel = typeof option === 'object' ? (option.label || option.value) : option;
+                          return (
+                            <option key={optionValue} value={optionValue}>
+                              {optionLabel}
+                            </option>
+                          );
+                        })}
                     </Select>
                   </GridItem>
                 )}
@@ -647,11 +686,11 @@ export default function ModulePage() {
                               <Td key={`${record.id}-${field.name}`}>
                                 {field.name === 'status' ? (
                                   <Badge colorScheme={getStatusColor(value, moduleName)}>
-                                    {value || '-'}
+                                    {getDisplayValue(field, value)}
                                   </Badge>
                                 ) : field.name === 'priority' ? (
                                   <Badge colorScheme={getPriorityColor(value)}>
-                                    {value || '-'}
+                                    {getDisplayValue(field, value)}
                                   </Badge>
                                 ) : field.name === 'name' || field.name.toLowerCase().includes('name') ? (
                                   <Text fontWeight="medium" color="primary.700">
@@ -688,7 +727,7 @@ export default function ModulePage() {
                                 colorScheme="primary"
                                 onClick={() => handleEdit(record)}
                               />
-                              {moduleName === 'Leads' && getFieldValue(record, 'status') !== 'Converted' && (
+                              {moduleName === 'Leads' && getStringValue(getFieldValue(record, 'status')) !== 'Converted' && (
                                 <IconButton
                                   aria-label="Convert to Client"
                                   icon={<Text>✓</Text>}
@@ -698,9 +737,9 @@ export default function ModulePage() {
                                   isLoading={isConverting}
                                   title="Convert Lead to Client"
                                   onClick={() => handleConvertLeadToClient(record.id)}
-                                />
+                                />  
                               )}
-                              {moduleName === 'Quotations' && getFieldValue(record, 'status') !== 'Converted' && (
+                              {moduleName === 'Quotations' && getStringValue(getFieldValue(record, 'status')) !== 'Converted' && (
                                 <IconButton
                                   aria-label="Convert to Order"
                                   icon={<Text>📋</Text>}
@@ -710,9 +749,9 @@ export default function ModulePage() {
                                   isLoading={isConverting}
                                   title="Convert Quotation to Order"
                                   onClick={() => handleConvertQuotationToOrder(record.id)}
-                                />
+                                />  
                               )}
-                              {moduleName === 'Orders' && getFieldValue(record, 'status') !== 'Invoiced' && (
+                              {moduleName === 'Orders' && getStringValue(getFieldValue(record, 'status')) !== 'Invoiced' && (
                                 <IconButton
                                   aria-label="Convert to Invoice"
                                   icon={<Text>🧾</Text>}
@@ -816,18 +855,18 @@ export default function ModulePage() {
                           </Text>
                           {field.name === 'status' ? (
                             <Badge colorScheme={getStatusColor(value, moduleName)} fontSize="sm">
-                              {value}
+                              {getDisplayValue(field, value)}
                             </Badge>
                           ) : field.name === 'priority' ? (
                             <Badge colorScheme={getPriorityColor(value)} fontSize="sm">
-                              {value}
+                              {getDisplayValue(field, value)}
                             </Badge>
                           ) : field.dataType === 'currency' ? (
                             <Text fontSize="md" fontWeight="medium" color="accent.700">
-                              ₹{new Intl.NumberFormat('en-IN').format(value)}
+                              {getDisplayValue(field, value)}
                             </Text>
                           ) : (
-                            <Text fontSize="md">{value}</Text>
+                            <Text fontSize="md">{getDisplayValue(field, value)}</Text>
                           )}
                         </Box>
                       </GridItem>

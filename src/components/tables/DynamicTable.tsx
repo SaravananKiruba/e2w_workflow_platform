@@ -72,34 +72,39 @@ export function DynamicTable({
       return <Text color="gray.400">-</Text>;
     }
 
+    // Handle object values (lookup/dropdown fields that return {label, value})
+    const displayValue = typeof value === 'object' && !Array.isArray(value)
+      ? (value.label || value.value || value.name || '-')
+      : value;
+
     switch (field.uiType) {
       case 'badge':
-        return <Badge colorScheme="blue">{value}</Badge>;
+        return <Badge colorScheme="blue">{displayValue}</Badge>;
 
       case 'date':
         try {
           return format(new Date(value), 'dd/MM/yyyy');
         } catch {
-          return value;
+          return String(displayValue);
         }
 
       case 'datetime':
         try {
           return format(new Date(value), 'dd/MM/yyyy HH:mm');
         } catch {
-          return value;
+          return String(displayValue);
         }
 
       case 'currency':
         const currency = field.config?.currency || 'INR';
         const decimals = field.config?.decimals || 2;
-        return `${currency} ${Number(value).toFixed(decimals)}`;
+        return `${currency} ${Number(displayValue).toFixed(decimals)}`;
 
       case 'checkbox':
-        return <Badge colorScheme={value ? 'green' : 'gray'}>{value ? 'Yes' : 'No'}</Badge>;
+        return <Badge colorScheme={displayValue ? 'green' : 'gray'}>{displayValue ? 'Yes' : 'No'}</Badge>;
 
       default:
-        return String(value);
+        return String(displayValue);
     }
   };
 
