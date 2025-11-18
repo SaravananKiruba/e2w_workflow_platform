@@ -46,11 +46,12 @@ import {
   Flex,
 } from '@chakra-ui/react';
 import { useEffect, useState, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { DynamicForm, DynamicFormRef } from '@/components/forms/DynamicForm';
 import { ModuleConfig, FieldDefinition } from '@/types/metadata';
 import AppLayout from '@/components/layout/AppLayout';
+import ModuleTilesView from '@/components/tables/ModuleTilesView';
 
 interface ModuleRecord {
   id: string;
@@ -83,6 +84,7 @@ interface ModuleRecord {
  */
 export default function ModulePage() {
   const params = useParams();
+  const router = useRouter();
   const { data: session } = useSession();
   const toast = useToast();
   const formRef = useRef<DynamicFormRef>(null);
@@ -101,6 +103,11 @@ export default function ModulePage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [activeTab, setActiveTab] = useState(0);
+
+  // View mode state - default based on user role
+  const userRole = session?.user?.role || 'staff';
+  const defaultViewMode = (userRole === 'manager' || userRole === 'staff') ? 'tiles' : 'table';
+  const [viewMode, setViewMode] = useState<'table' | 'tiles'>(defaultViewMode);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
   const {
@@ -220,8 +227,8 @@ export default function ModulePage() {
   };
 
   const handleCreateNew = () => {
-    setSelectedRecord(null);
-    onOpen();
+    // Navigate to new record page instead of opening modal
+    router.push(`/modules/${moduleName}/new`);
   };
 
   const handleEdit = (record: ModuleRecord) => {
@@ -263,6 +270,21 @@ export default function ModulePage() {
         status: 'error',
         isClosable: true,
       });
+    }
+  };
+
+  // Unified conversion handler for tiles view
+  const handleConversion = async (recordId: string, conversionType: string) => {
+    switch (conversionType) {
+      case 'lead-to-client':
+        await handleConvertLeadToClient(recordId);
+        break;
+      case 'quotation-to-order':
+        await handleConvertQuotationToOrder(recordId);
+        break;
+      case 'order-to-invoice':
+        await handleConvertOrderToInvoice(recordId);
+        break;
     }
   };
 
@@ -564,14 +586,39 @@ export default function ModulePage() {
                 {moduleConfig.description || `Manage ${moduleConfig.displayName}`}
               </Text>
             </Box>
-            <Button
-              colorScheme="primary"
-              onClick={handleCreateNew}
-              size="md"
-              leftIcon={<Text>➕</Text>}
-            >
-              New {moduleConfig.displayName.replace(/s$/, '')}
-            </Button>
+            <HStack spacing={3}>
+              {/* View Toggle */}
+              <HStack spacing={0} bg="gray.100" borderRadius="md" p={1}>
+                <Button
+                  size="sm"
+                  variant={viewMode === 'table' ? 'solid' : 'ghost'}
+                  colorScheme={viewMode === 'table' ? 'primary' : 'gray'}
+                  onClick={() => setViewMode('table')}
+                  leftIcon={<Text fontSize="sm">📋</Text>}
+                >
+                  Table
+                </Button>
+                <Button
+                  size="sm"
+                  variant={viewMode === 'tiles' ? 'solid' : 'ghost'}
+                  colorScheme={viewMode === 'tiles' ? 'primary' : 'gray'}
+                  onClick={() => setViewMode('tiles')}
+                  leftIcon={<Text fontSize="sm">🎴</Text>}
+                >
+                  Tiles
+                </Button>
+              </HStack>
+              
+              {/* Create New Button */}
+              <Button
+                colorScheme="primary"
+                onClick={handleCreateNew}
+                size="md"
+                leftIcon={<Text>➕</Text>}
+              >
+                New {moduleConfig.displayName.replace(/s$/, '')}
+              </Button>
+            </HStack>
           </Flex>
 
           {/* Statistics Dashboard (for modules with status field) */}
@@ -589,8 +636,8 @@ export default function ModulePage() {
             </GridItem>
             {moduleConfig.fields
               .find((f) => f.name === 'status')
-              ?.config?.options.slice(0, 5)
-              .map((option: any) => {
+              ?.config?.options?.slice(0, 5)
+              ?.map((option: any) => {
                 const optionValue = typeof option === 'object' ? (option.value || option.label) : option;
                 const optionLabel = typeof option === 'object' ? (option.label || option.value) : option;
                 return (
@@ -633,7 +680,7 @@ export default function ModulePage() {
                       <option value="All">All Status</option>
                       {moduleConfig.fields
                         .find((f) => f.name === 'status')
-                        ?.config?.options.map((option: any) => {
+                        ?.config?.options?.map((option: any) => {
                           const optionValue = typeof option === 'object' ? (option.value || option.label) : option;
                           const optionLabel = typeof option === 'object' ? (option.label || option.value) : option;
                           return (
@@ -662,8 +709,19 @@ export default function ModulePage() {
             </Tabs>
           )}
 
-          {/* Records Table */}
-          {displayRecords.length > 0 ? (
+          {/* Records Display - Table or Tiles View */}
+          {viewMode === 'tiles' ? (
+            <ModuleTilesView
+              records={displayRecords}
+              moduleConfig={moduleConfig}
+              moduleName={moduleName}
+              onView={handleView}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onConvert={handleConversion}
+              isConverting={isConverting}
+            />
+          ) : displayRecords.length > 0 ? (
             <Card bg="white">
               <CardBody p={0}>
                 <TableContainer>
