@@ -81,19 +81,6 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Legacy /admin routes - redirect to /tenant-admin for non-platform admins
-  if (request.nextUrl.pathname.startsWith('/admin') && token.role !== 'platform_admin') {
-    const newPath = request.nextUrl.pathname.replace('/admin', '/tenant-admin');
-    return NextResponse.redirect(new URL(newPath + request.nextUrl.search, request.url));
-  }
-
-  // Admin route guard (legacy support) - admin, manager, and platform_admin can access
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    if (!['admin', 'manager', 'platform_admin'].includes(token.role as string)) {
-      return NextResponse.redirect(new URL('/unauthorized?reason=admin_required', request.url));
-    }
-  }
-
   // Add tenant context to headers for API routes
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-tenant-id', token.tenantId as string);
