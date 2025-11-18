@@ -56,10 +56,29 @@ async function fetchLookupOptions(params: LookupParams): Promise<LookupOption[]>
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch lookup options: ${response.statusText}`);
+    // Try to get error message from response body
+    let errorMessage = `Failed to fetch ${targetModule} records`;
+    try {
+      const errorData = await response.json();
+      if (errorData.error) {
+        errorMessage = errorData.error;
+      }
+    } catch {
+      // If parsing fails, use status text
+      errorMessage = `${errorMessage}: ${response.statusText}`;
+    }
+    throw new Error(errorMessage);
   }
 
-  return response.json();
+  const data = await response.json();
+  
+  // Ensure we always return an array
+  if (Array.isArray(data)) {
+    return data;
+  }
+  
+  console.warn('[useLookupOptions] Expected array but got:', typeof data);
+  return [];
 }
 
 /**
@@ -80,6 +99,8 @@ export function useLookupOptions(params: LookupParams | null) {
     queryFn: () => params ? fetchLookupOptions(params) : Promise.resolve([]),
     enabled: !!params?.tenantId && !!params?.targetModule,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2, // Retry failed requests twice
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
   });
 }
 

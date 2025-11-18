@@ -35,6 +35,10 @@ export interface FieldDefinition {
   defaultValue?: any;
   helpText?: string;
   placeholder?: string;
+  // Backward compatibility - deprecated, use config instead
+  lookupConfig?: FieldConfig;
+  tableConfig?: FieldConfig;
+  options?: string[] | { label: string; value: string }[];
 }
 
 export interface ValidationRule {

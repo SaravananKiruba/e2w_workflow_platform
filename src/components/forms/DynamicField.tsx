@@ -20,13 +20,17 @@ export function DynamicField({ field, value, onChange, onCascadePopulate, error 
   const selectRef = useRef<HTMLSelectElement>(null);
   const [internalValue, setInternalValue] = useState<any>(value);
 
+  // Backward compatibility: support both config and lookupConfig
+  const lookupConfig = field.config || field.lookupConfig || {};
+  const targetModule = lookupConfig.targetModule;
+  
   // Use React Query for lookup data - automatically cached and refreshed
-  const lookupQueryParams = field.uiType === 'lookup' && field.config?.targetModule && session?.user?.tenantId
+  const lookupQueryParams = field.uiType === 'lookup' && targetModule && session?.user?.tenantId
     ? {
         tenantId: session.user.tenantId,
-        targetModule: field.config.targetModule,
-        displayField: field.config.displayField || 'name',
-        searchFields: field.config.searchFields || ['name'],
+        targetModule: targetModule,
+        displayField: lookupConfig.displayField || 'name',
+        searchFields: lookupConfig.searchFields || ['name'],
       }
     : null;
 
@@ -77,9 +81,9 @@ export function DynamicField({ field, value, onChange, onCascadePopulate, error 
   useEffect(() => {
     if (field.uiType === 'lookup') {
       console.log(`[DynamicField ${field.name}] 🔧 Lookup field initialized:`, {
-        targetModule: field.config?.targetModule,
-        displayField: field.config?.displayField,
-        hasCascadeFields: !!field.config?.cascadeFields
+        targetModule: targetModule,
+        displayField: lookupConfig.displayField,
+        hasCascadeFields: !!lookupConfig.cascadeFields
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -111,10 +115,10 @@ export function DynamicField({ field, value, onChange, onCascadePopulate, error 
     if (field.uiType === 'lookup' && onCascadePopulate && newValue) {
       const selectedOption = lookupOptions.find((opt) => opt.value === newValue);
       
-      if (selectedOption?.record && field.config?.cascadeFields) {
+      if (selectedOption?.record && lookupConfig.cascadeFields) {
         const cascadeData: Record<string, any> = {};
         const record = selectedOption.record;
-        Object.entries(field.config.cascadeFields).forEach(([sourceField, targetField]) => {
+        Object.entries(lookupConfig.cascadeFields).forEach(([sourceField, targetField]) => {
           if (record[sourceField] !== undefined) {
             cascadeData[targetField as string] = record[sourceField];
           }
@@ -224,19 +228,28 @@ export function DynamicField({ field, value, onChange, onCascadePopulate, error 
               </Box>
               {lookupLoading && <Spinner size="sm" />}
             </HStack>
-            {!lookupLoading && lookupOptions.length === 0 && (
-              <Box fontSize="sm" color="orange.500">
-                ⚠️ No {field.config?.targetModule} records found. Check browser console for details.
-              </Box>
-            )}
-            {!lookupLoading && lookupOptions.length > 0 && (
-              <Box fontSize="sm" color="green.500">
-                ✓ Loaded {lookupOptions.length} {field.config?.targetModule} records
-              </Box>
-            )}
+            {/* Show loading state */}
             {lookupLoading && (
               <Box fontSize="sm" color="gray.500">
-                Loading {field.config?.targetModule} records...
+                Loading {targetModule} records...
+              </Box>
+            )}
+            {/* Show error if fetch failed */}
+            {!lookupLoading && lookupError && (
+              <Box fontSize="sm" color="red.500">
+                ❌ Error loading {targetModule}: {lookupError instanceof Error ? lookupError.message : 'Unknown error'}
+              </Box>
+            )}
+            {/* Show warning if no records but no error */}
+            {!lookupLoading && !lookupError && lookupOptions.length === 0 && (
+              <Box fontSize="sm" color="orange.500">
+                ⚠️ No {targetModule} records found. Create one first.
+              </Box>
+            )}
+            {/* Show success state */}
+            {!lookupLoading && !lookupError && lookupOptions.length > 0 && (
+              <Box fontSize="sm" color="green.500">
+                ✓ Loaded {lookupOptions.length} {targetModule} record{lookupOptions.length === 1 ? '' : 's'}
               </Box>
             )}
           </VStack>
