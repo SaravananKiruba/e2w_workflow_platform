@@ -39,7 +39,6 @@ model Tenant {
   
   // Relations
   users         User[]
-  branches      Branch[]
   modules       ModuleConfiguration[]
   workflows     Workflow[]
   integrations  Integration[]
@@ -56,31 +55,10 @@ model Tenant {
   @@map("tenants")
 }
 
-model Branch {
-  id          String   @id @default(cuid())
-  tenantId    String
-  name        String
-  code        String
-  address     String?  // JSON: Street, city, state, pincode, country
-  contact     String?  // JSON: Phone, email
-  gstNumber   String?
-  
-  status      String   @default("active")
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  users       User[]
-  
-  @@unique([tenantId, code])
-  @@map("branches")
-}
-
 model User {
   id            String    @id @default(cuid())
   tenantId      String?   // Optional - Platform admins don't belong to any tenant
-  branchId      String?
+  branchId      String?   // Optional - Branch assignment
   
   email         String    @unique
   name          String
@@ -98,7 +76,6 @@ model User {
   lastLoginAt   DateTime?
   
   tenant        Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch        Branch?   @relation(fields: [branchId], references: [id])
   
   createdAuditLogs AuditLog[] @relation("UserAuditLogs")
   
@@ -120,24 +97,22 @@ model ModuleConfiguration {
   
   // Workflow-based configuration
   workflowCategory String?  // Sales, Purchase, HR, Inventory, Custom
-  workflowName     String?  // e.g., "Sales Pipeline", "Purchase Cycle", "Employee Management"
+  workflowName     String?  // Specific workflow name for analytics
   position         Int      @default(999) // Order within workflow/category
-  insertAfter      String?  // Module name to insert after
   showInNav        Boolean  @default(true) // Show in sidebar navigation
-  allowedRoles     String?  // JSON: Array of roles that can access ['manager', 'owner', 'staff']
   isCustomModule   Boolean  @default(false) // True for tenant-created modules
-  isCustomized     Boolean  @default(false) // True if a system module has been customized
+  isCustomized     Boolean  @default(false) // Track if fields have been customized
   
   // Dynamic schema definition (stored as JSON strings)
   fields      String   // JSON: Array of field definitions
   layouts     String?  // JSON: UI layout configuration
   validations String?  // JSON: Validation rules
   
-  // Filter configuration (Week 1-2 enhancement)
-  filterConfig String?  // JSON: Filter configuration - searchable fields, filter types
+  // Filter configuration
   searchableFields String? // JSON: Array of field names that support search
+  filterConfig     String? // JSON: Filter configuration
   
-  // Hot updates configuration (Week 3 enhancement)
+  // Hot updates configuration
   allowHotUpdates Boolean @default(false) // Enable instant field updates without versioning
   lastFieldUpdate DateTime? // Track when fields were last updated
   
@@ -196,71 +171,14 @@ model FilterPreset {
   @@map("filter_presets")
 }
 
-// Week 4: Configurable Sidebar System
-model SidebarConfiguration {
-  id              String   @id @default(cuid())
-  tenantId        String
-  role            String   // USER, TENANT_ADMIN, PLATFORM_ADMIN
-  items           String   // JSON: Sidebar items array
-  order           Int      @default(0)
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  @@unique([tenantId, role])
-  @@map("sidebar_configurations")
-}
-
 // ==========================================
 // WORKFLOW ENGINE MODELS
 // ==========================================
 
-// Workflow Category - Define business workflows (Sales, Purchase, HR, etc.)
-model WorkflowCategory {
-  id              String   @id @default(cuid())
-  tenantId        String?  // Null for system default workflows
-  
-  name            String   // Sales, Purchase, HR, Inventory, Custom
-  displayName     String   // Display name for UI
-  description     String?
-  icon            String?  // Icon for this workflow category
-  
-  isSystem        Boolean  @default(false) // True for Sales/Purchase defaults
-  isActive        Boolean  @default(true)
-  
-  // Predefined module sequence (JSON array of module names)
-  moduleSequence  String?  // JSON: ['Leads', 'Clients', 'Quotations', 'Orders', 'Invoices', 'Payments']
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  createdBy       String?
-  
-  @@unique([tenantId, name])
-  @@map("workflow_categories")
-}
-
-// Week 5-6: Workflow Template System
-model WorkflowTemplate {
-  id              String   @id @default(cuid())
-  name            String
-  description     String?
-  category        String   // Approval, Notification, Automation
-  isPublic        Boolean  @default(false) // Platform-wide or tenant-specific
-  templateData    String   // JSON: Workflow definition
-  createdBy       String   // User/Platform
-  tenantId        String?  // Null for platform templates
-  version         String   @default("1.0.0")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  @@index([tenantId])
-  @@index([category])
-  @@map("workflow_templates")
-}
-
 model Workflow {
   id          String   @id @default(cuid())
   tenantId    String
+  templateId  String?  // Optional reference to workflow template
   
   name        String
   description String?
@@ -272,9 +190,6 @@ model Workflow {
   
   isActive    Boolean  @default(true)
   priority    Int      @default(0)
-  
-  // Week 5-6: Template support
-  templateId  String?  // If created from template
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -711,22 +626,67 @@ model AutoNumberSequence {
 }
 
 // ==========================================
-// CUSTOM FIELD EXTENSIONS (Week 7)
+// SIDEBAR CONFIGURATION
 // ==========================================
 
-model CustomFieldExtension {
+model SidebarConfiguration {
+  id          String   @id @default(cuid())
+  tenantId    String
+  role        String   // Role this configuration applies to
+  items       String   // JSON: Sidebar items configuration
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([tenantId, role])
+  @@index([tenantId])
+  @@map("sidebar_configurations")
+}
+
+// ==========================================
+// WORKFLOW CATEGORIES & TEMPLATES
+// ==========================================
+
+model WorkflowCategory {
   id              String   @id @default(cuid())
-  tenantId        String
-  moduleId        String   // Core module ID (leads, clients, etc.)
-  fieldName       String
-  fieldType       String
-  fieldConfig     String   // JSON: Field configuration
+  tenantId        String?  // Null for system workflows
+  
+  name            String
+  displayName     String
+  description     String?
+  icon            String?
+  
+  moduleSequence  String?  // JSON: Array of module names in order
+  isSystem        Boolean  @default(false) // System-defined vs tenant-defined
   isActive        Boolean  @default(true)
+  
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
-  @@unique([tenantId, moduleId, fieldName])
-  @@index([tenantId, moduleId])
-  @@map("custom_field_extensions")
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("workflow_categories")
+}
+
+model WorkflowTemplate {
+  id           String   @id @default(cuid())
+  tenantId     String?  // Null for platform templates
+  
+  name         String
+  description  String?
+  category     String   // Sales, Purchase, HR, Custom, etc.
+  templateData String   // JSON: Workflow definition
+  
+  isPublic     Boolean  @default(false) // Available to all tenants
+  version      Int      @default(1)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdBy    String?
+  
+  @@index([tenantId])
+  @@index([category])
+  @@map("workflow_templates")
 }
 

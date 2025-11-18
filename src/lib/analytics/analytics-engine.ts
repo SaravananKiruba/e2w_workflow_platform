@@ -500,7 +500,7 @@ export class AnalyticsEngine {
     const modules = await prisma.moduleConfiguration.findMany({
       where: {
         tenantId,
-        workflowName,
+        workflowCategory: workflowName,
         status: 'active',
       },
       select: {

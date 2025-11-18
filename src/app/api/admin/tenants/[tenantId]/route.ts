@@ -21,7 +21,6 @@ export async function GET(
             users: true,
             modules: true,
             workflows: true,
-            branches: true,
           },
         },
       },

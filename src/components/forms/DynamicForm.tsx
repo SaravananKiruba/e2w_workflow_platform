@@ -22,6 +22,14 @@ export const DynamicForm = forwardRef<DynamicFormRef, DynamicFormProps>(
   const [formData, setFormData] = useState<Record<string, any>>(initialData);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Update formData when initialData changes (important for edit mode)
+  useEffect(() => {
+    if (initialData && Object.keys(initialData).length > 0) {
+      console.log('[DynamicForm] 🔄 Updating formData from initialData:', initialData);
+      setFormData(initialData);
+    }
+  }, [initialData]);
+
   // Debug: Track formData changes
   useEffect(() => {
     console.log('[DynamicForm] 📊 formData STATE CHANGED:', {

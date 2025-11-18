@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
         isPublic: canMakePublic,
         tenantId: canMakePublic ? null : tenantContext.tenantId,
         createdBy: session.user.id || session.user.email || 'unknown',
-        version: '1.0.0',
+        version: 1,
       },
     });
 

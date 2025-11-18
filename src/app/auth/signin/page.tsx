@@ -82,7 +82,7 @@ export default function SignIn() {
       justifyContent="center"
       position="relative"
       overflow="hidden"
-      bgGradient="linear(to-br, blue.500, purple.600)"
+      bgGradient="linear(135deg, primary.500, secondary.600, accent.500)"
       px={4}
     >
       <Container maxW={{ base: "full", sm: "md" }} position="relative" zIndex={1}>
@@ -94,6 +94,7 @@ export default function SignIn() {
                 fontSize={{ base: "4xl", md: "5xl" }}
                 fontWeight="bold"
                 color="white"
+                textShadow="0 2px 10px rgba(0,0,0,0.2)"
               >
                 💼 Easy2Work
               </Text>
@@ -102,8 +103,9 @@ export default function SignIn() {
                 size={{ base: "md", md: "lg" }}
                 color="white"
                 fontWeight="600"
+                textShadow="0 1px 5px rgba(0,0,0,0.15)"
               >
-                Workflow Platform
+                Multi-Tenant SaaS Platform
               </Heading>
             </VStack>
 
@@ -135,7 +137,7 @@ export default function SignIn() {
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="you@company.com"
                         borderRadius="lg"
-                        focusBorderColor="purple.500"
+                        focusBorderColor="primary.500"
                       />
                     </InputGroup>
                   </FormControl>
@@ -154,14 +156,14 @@ export default function SignIn() {
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Enter your password"
                         borderRadius="lg"
-                        focusBorderColor="purple.500"
+                        focusBorderColor="primary.500"
                       />
                     </InputGroup>
                   </FormControl>
 
                   <HStack w="full" justify="space-between" flexWrap="wrap">
                     <Checkbox
-                      colorScheme="purple"
+                      colorScheme="primary"
                       isChecked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
                       size={{ base: "sm", md: "md" }}
@@ -170,9 +172,9 @@ export default function SignIn() {
                     </Checkbox>
                     <Link
                       fontSize="sm"
-                      color="purple.600"
+                      color="primary.600"
                       fontWeight="600"
-                      _hover={{ textDecoration: 'underline' }}
+                      _hover={{ textDecoration: 'underline', color: 'primary.700' }}
                     >
                       Forgot password?
                     </Link>
@@ -185,14 +187,17 @@ export default function SignIn() {
                     isLoading={isLoading}
                     loadingText="Signing in..."
                     borderRadius="lg"
-                    bgGradient="linear(to-r, blue.500, purple.600)"
+                    bgGradient="linear(to-r, primary.500, accent.500)"
                     color="white"
                     fontWeight="bold"
                     rightIcon={<Icon as={FiArrowRight} />}
                     _hover={{
-                      bgGradient: 'linear(to-r, blue.600, purple.700)',
+                      bgGradient: 'linear(to-r, primary.600, accent.600)',
                       transform: 'translateY(-2px)',
-                      shadow: 'lg',
+                      shadow: 'xl',
+                    }}
+                    _active={{
+                      transform: 'translateY(0)',
                     }}
                     transition="all 0.2s"
                   >

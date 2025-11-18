@@ -5,6 +5,7 @@ import { FieldDefinition } from '@/types/metadata';
 import { TableField } from './TableField';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
+import { useLookupOptions } from '@/lib/hooks/use-lookup-query';
 
 interface DynamicFieldProps {
   field: FieldDefinition;
@@ -16,10 +17,28 @@ interface DynamicFieldProps {
 
 export function DynamicField({ field, value, onChange, onCascadePopulate, error }: DynamicFieldProps) {
   const { data: session } = useSession();
-  const [lookupOptions, setLookupOptions] = useState<any[]>([]);
-  const [lookupLoading, setLookupLoading] = useState(false);
   const selectRef = useRef<HTMLSelectElement>(null);
   const [internalValue, setInternalValue] = useState<any>(value);
+
+  // Backward compatibility: support both config and lookupConfig
+  const lookupConfig = field.config || field.lookupConfig || {};
+  const targetModule = lookupConfig.targetModule;
+  
+  // Use React Query for lookup data - automatically cached and refreshed
+  const lookupQueryParams = field.uiType === 'lookup' && targetModule && session?.user?.tenantId
+    ? {
+        tenantId: session.user.tenantId,
+        targetModule: targetModule,
+        displayField: lookupConfig.displayField || 'name',
+        searchFields: lookupConfig.searchFields || ['name'],
+      }
+    : null;
+
+  const { 
+    data: lookupOptions = [], 
+    isLoading: lookupLoading,
+    error: lookupError 
+  } = useLookupOptions(lookupQueryParams);
 
   // Debug: Track what causes re-renders
   const renderCountRef = useRef(0);
@@ -62,94 +81,20 @@ export function DynamicField({ field, value, onChange, onCascadePopulate, error 
   useEffect(() => {
     if (field.uiType === 'lookup') {
       console.log(`[DynamicField ${field.name}] 🔧 Lookup field initialized:`, {
-        targetModule: field.config?.targetModule,
-        displayField: field.config?.displayField,
-        hasCascadeFields: !!field.config?.cascadeFields
+        targetModule: targetModule,
+        displayField: lookupConfig.displayField,
+        hasCascadeFields: !!lookupConfig.cascadeFields
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadLookupOptions = useCallback(async () => {
-    console.log(`[DynamicField ${field.name}] loadLookupOptions called`);
-    console.log(`[DynamicField ${field.name}] Session:`, {
-      hasSession: !!session,
-      hasUser: !!session?.user,
-      tenantId: session?.user?.tenantId,
-      email: session?.user?.email,
-      fullUser: session?.user
-    });
-    console.log(`[DynamicField ${field.name}] Field config:`, {
-      uiType: field.uiType,
-      targetModule: field.config?.targetModule,
-      displayField: field.config?.displayField,
-      searchFields: field.config?.searchFields
-    });
-    
-    if (!session?.user?.tenantId) {
-      console.error(`[DynamicField ${field.name}] ❌ Missing tenantId in session!`);
-      console.error(`[DynamicField ${field.name}] Session object:`, JSON.stringify(session, null, 2));
-      return;
-    }
-    
-    if (!field.config?.targetModule) {
-      console.error(`[DynamicField ${field.name}] ❌ Missing targetModule in field config!`);
-      return;
-    }
-
-    setLookupLoading(true);
-    try {
-      const url = `/api/metadata/lookup?tenantId=${session.user.tenantId}&targetModule=${field.config.targetModule}&displayField=${field.config.displayField || 'name'}&searchFields=${(field.config.searchFields || ['name']).join(',')}`;
-      console.log(`[DynamicField ${field.name}] 🌐 Fetching from:`, url);
-      
-      const response = await fetch(url);
-      console.log(`[DynamicField ${field.name}] Response status:`, response.status);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log(`[DynamicField ${field.name}] ✅ Raw response data:`, data);
-        console.log(`[DynamicField ${field.name}] Response type:`, Array.isArray(data) ? 'Array' : typeof data);
-        
-        // Handle both array and {records: []} format
-        const options = Array.isArray(data) ? data : (data.records || []);
-        console.log(`[DynamicField ${field.name}] ✅ Processed options:`, options);
-        console.log(`[DynamicField ${field.name}] ✅ Setting ${options.length} options in state`);
-        setLookupOptions(options);
-      } else {
-        const errorText = await response.text();
-        console.error(`[DynamicField ${field.name}] ❌ HTTP ${response.status}:`, errorText);
-        setLookupOptions([]);
-      }
-    } catch (error) {
-      console.error(`[DynamicField ${field.name}] ❌ Exception:`, error);
-      setLookupOptions([]);
-    } finally {
-      setLookupLoading(false);
-      console.log(`[DynamicField ${field.name}] Loading complete`);
-    }
-  }, [session, field.name, field.config?.targetModule, field.config?.displayField, field.config?.searchFields]);
-
-  // Load lookup options when component mounts or field changes
-  useEffect(() => {
-    console.log(`[DynamicField ${field.name}] useEffect triggered`, {
-      uiType: field.uiType,
-      targetModule: field.config?.targetModule,
-      tenantId: session?.user?.tenantId,
-      hasSession: !!session,
-      sessionStatus: session ? 'loaded' : 'not loaded'
-    });
-    
-    if (field.uiType === 'lookup' && field.config?.targetModule && session?.user?.tenantId) {
-      console.log(`[DynamicField ${field.name}] ✓ All conditions met, calling loadLookupOptions`);
-      loadLookupOptions();
-    } else {
-      console.log(`[DynamicField ${field.name}] ✗ Conditions not met:`, {
-        isLookup: field.uiType === 'lookup',
-        hasTargetModule: !!field.config?.targetModule,
-        hasTenantId: !!session?.user?.tenantId
-      });
-    }
-  }, [field.name, field.uiType, field.config?.targetModule, session?.user?.tenantId, loadLookupOptions]);
+  // Removed loadLookupOptions - now handled by React Query hook above
+  // The hook automatically:
+  // - Fetches data when params change
+  // - Caches results
+  // - Refetches when invalidated
+  // - Provides loading/error states
 
   const handleChange = (newValue: any) => {
     console.log(`[DynamicField ${field.name}] � handleChange CALLED:`, {
@@ -170,11 +115,12 @@ export function DynamicField({ field, value, onChange, onCascadePopulate, error 
     if (field.uiType === 'lookup' && onCascadePopulate && newValue) {
       const selectedOption = lookupOptions.find((opt) => opt.value === newValue);
       
-      if (selectedOption?.record && field.config?.cascadeFields) {
+      if (selectedOption?.record && lookupConfig.cascadeFields) {
         const cascadeData: Record<string, any> = {};
-        Object.entries(field.config.cascadeFields).forEach(([sourceField, targetField]) => {
-          if (selectedOption.record[sourceField] !== undefined) {
-            cascadeData[targetField as string] = selectedOption.record[sourceField];
+        const record = selectedOption.record;
+        Object.entries(lookupConfig.cascadeFields).forEach(([sourceField, targetField]) => {
+          if (record[sourceField] !== undefined) {
+            cascadeData[targetField as string] = record[sourceField];
           }
         });
         if (Object.keys(cascadeData).length > 0) {
@@ -281,28 +227,29 @@ export function DynamicField({ field, value, onChange, onCascadePopulate, error 
                 </select>
               </Box>
               {lookupLoading && <Spinner size="sm" />}
-              <Button 
-                size="sm" 
-                onClick={loadLookupOptions}
-                isDisabled={lookupLoading}
-                title="Refresh options"
-              >
-                ↻
-              </Button>
             </HStack>
-            {!lookupLoading && lookupOptions.length === 0 && (
-              <Box fontSize="sm" color="orange.500">
-                ⚠️ No {field.config?.targetModule} records found. Check browser console for details.
-              </Box>
-            )}
-            {!lookupLoading && lookupOptions.length > 0 && (
-              <Box fontSize="sm" color="green.500">
-                ✓ Loaded {lookupOptions.length} {field.config?.targetModule} records
-              </Box>
-            )}
+            {/* Show loading state */}
             {lookupLoading && (
               <Box fontSize="sm" color="gray.500">
-                Loading {field.config?.targetModule} records...
+                Loading {targetModule} records...
+              </Box>
+            )}
+            {/* Show error if fetch failed */}
+            {!lookupLoading && lookupError && (
+              <Box fontSize="sm" color="red.500">
+                ❌ Error loading {targetModule}: {lookupError instanceof Error ? lookupError.message : 'Unknown error'}
+              </Box>
+            )}
+            {/* Show warning if no records but no error */}
+            {!lookupLoading && !lookupError && lookupOptions.length === 0 && (
+              <Box fontSize="sm" color="orange.500">
+                ⚠️ No {targetModule} records found. Create one first.
+              </Box>
+            )}
+            {/* Show success state */}
+            {!lookupLoading && !lookupError && lookupOptions.length > 0 && (
+              <Box fontSize="sm" color="green.500">
+                ✓ Loaded {lookupOptions.length} {targetModule} record{lookupOptions.length === 1 ? '' : 's'}
               </Box>
             )}
           </VStack>
