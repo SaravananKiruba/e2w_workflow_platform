@@ -322,9 +322,12 @@ export async function seedDefaultModules(prisma: PrismaClient, tenantId: string,
 
   const createdModules = [];
   for (const moduleData of defaultModules) {
+    // Remove fields that don't exist in schema
+    const { workflowName, allowedRoles, isCustomized, ...validData } = moduleData;
+    
     const module = await prisma.moduleConfiguration.create({
       data: {
-        ...moduleData,
+        ...validData,
         tenantId,
         createdBy,
       },

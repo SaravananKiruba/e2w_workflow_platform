@@ -132,16 +132,6 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // Create default branch (Head Office)
-      const branch = await tx.branch.create({
-        data: {
-          tenantId: tenant.id,
-          name: 'Head Office',
-          code: 'HQ',
-          status: 'active',
-        },
-      });
-
       // Create tenant admin user
       const adminUser = await tx.user.create({
         data: {
@@ -149,7 +139,6 @@ export async function POST(req: NextRequest) {
           name: `${name} Admin`,
           password: hashedPassword,
           tenantId: tenant.id,
-          branchId: branch.id,
           role: 'admin',
           status: 'active',
         },
@@ -185,7 +174,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      return { tenant, adminUser, branch };
+      return { tenant, adminUser };
     });
 
     // Seed default modules after transaction (outside transaction for better error handling)
